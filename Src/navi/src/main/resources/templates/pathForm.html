@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+
+	<link rel="stylesheet" type="text/css" href="semantic/semantic.css">
+	<script
+	  src="assets/library/jquery.min.js"
+	  ></script>
+	<script src="semantic/semantic.js"></script>
+	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=685fb6d52e9558eb55705c0b663c66bd&libraries=services,clusterer,drawing"></script>
+
+<meta charset="UTF-8">
+<title>Navigation Web</title>
+
+    <style>
+        .column {
+            border: 1px solid gray;
+            text-align : center;
+        }
+        h1,h2 {
+        	text-align : center;
+        }
+    </style>
+    
+</head>
+
+<body>
+
+<h1>~ Welcome ~ Navigation Web</h1>
+
+<div id="map" style="width:1000px;height:500px;"></div>
+	<script th:inline="javascript">
+		var container = document.getElementById('map');
+		var options = {
+			center: new kakao.maps.LatLng(36.450701, 126.570667),
+			level: 13
+		};
+
+		var map = new kakao.maps.Map(container, options);
+		var polylines = new Map();
+		
+		// journey checkbox clicked
+		function checkClick(journeyId, journeyTimeId) {
+
+		    var journeys =/*[[${journeys}]]*/null; 
+			var chkIdx = 0;
+			var i = 0;
+			for (i=0; i < journeys.length; ++i)
+			{
+				if (journeys[i].id == journeyId)
+				{
+					chkIdx = i;
+					break;
+				}			
+			}
+			
+			var chkbox = document.getElementsByName('showChk');
+			if (chkbox[chkIdx].checked)
+			{
+				if (polylines.has(journeyTimeId) == true)
+				{
+					polylines.get(journeyTimeId).setMap(map);
+				}
+				else
+				{
+					var xmlHttp = new XMLHttpRequest();
+				   	xmlHttp.onreadystatechange = function() 
+				   	{ 
+				        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+				        {				
+				        	var data = JSON.parse(this.responseText);
+							var linePath = [];
+				            var i;
+				            for(i = 0; i < data.length && i < 5180; i++) 
+				            	linePath[i] = new kakao.maps.LatLng(data[i].lat, data[i].lon);
+	
+				    		var polyline = new kakao.maps.Polyline({
+				    		    path: linePath,
+				    		    strokeWeight: 5,
+				    		    strokeColor: '#FF0000',
+				    		    strokeOpacity: 0.7,
+				    		    strokeStyle: 'solid'
+				    		});
+				    		
+				    		polyline.setMap(map);
+				    		polylines.set(journeyTimeId, polyline);
+				        }
+				    }
+					xmlHttp.open("GET", "/path/" + journeyId + '/' + journeyTimeId, true);
+					xmlHttp.send(null);			   	
+				}				
+			}
+			else
+			{
+				if (polylines.has(journeyTimeId) == true)
+					polylines.get(journeyTimeId).setMap(null);
+			}			
+		}
+		
+	</script>
+
+
+<!-- <h3>Path List</h3> -->
+
+<div id="list" style="width:1000px;height:500px;overflow:auto;padding:10px;">
+	<table class="ui celled striped table">
+	  <thead>
+	    <tr><th>Show</th>
+	    <th>Number</th>
+	    <th>Date</th>
+	    <th>User</th>
+	    <th>Distance</th>
+	    <th>Journey Time</th>
+	  </tr></thead>
+	  <tbody th:each="journey : ${journeys}">
+	    <tr class="center aligned">
+	      <td class="collapsing">
+	        <div class="ui checkbox">
+	          <input type="checkbox" name="showChk"
+	          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}')|"></input><label></label>
+	        </div>
+	      </td>
+      	    
+	      <td data-label="Number" th:text="${journey.id}"></td>
+	      <td data-label="Date" th:text="${journey.date}"></td>
+	      <td data-label="User" th:text="${journey.userId}"></td>
+	      <td data-label="Distance" th:text="${journey.distance}"></td>
+	      <td data-label="Journey Time" th:text="${journey.journeyTime}"></td>
+	    </tr>
+	  </tbody>
+	</table>
+</div>
+
+<!-- 
+	<div class="ui centered grid">
+		<div class="eight column row">  Hello NaviWebServer  </div>
+		<div class="one wide column">Number</div>
+		<div class="three wide column">Date</div>
+		<div class="three wide column">User</div>
+		<div class="three wide column">Distance</div>
+		<div class="three wide column">Journey Time</div>
+	</div>
+	
+	<div class="ui centered grid" th:each="journey : ${journeys}">	
+		<div class="one wide column" th:text="${journey.id}"></div>
+		<div class="three wide column" th:text="${journey.date}"></div>
+		<div class="three wide column" th:text="${journey.userName}"></div>
+		<div class="three wide column" th:text="${journey.distance}"></div>
+		<div class="three wide column" th:text="${journey.journeyTime}"></div>		
+	</div>	
+ -->	
+
+
+</body>
+</html>
