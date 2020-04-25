@@ -6,13 +6,14 @@
 
 int InsertPathData();
 int InsertJourneyData();
+double WGS84Distance(const Vector2d &lonLat0, const Vector2d &lonLat1);
 
 
 int main()
 {
     std::cout << "navi DB Upload!\n"; 
-	InsertPathData();
-	//InsertJourneyData();
+	//InsertPathData();
+	InsertJourneyData();
 
 	return 0;
 }
@@ -87,6 +88,15 @@ int InsertJourneyData()
 		if (!path.Read(fileName))
 			continue;
 
+		double totDistance = 0; // total journey distance
+		for (uint i = 1; i < path.m_table.size(); ++i)
+		{
+			cPath::sRow r0 = path.m_table[i - 1];
+			cPath::sRow r1 = path.m_table[i];
+			const double d = WGS84Distance(r0.lonLat, r1.lonLat);
+			totDistance += d;
+		}
+
 		std::cout << "upload " << fileName << "\n";
 		for (auto &row : path.m_table)
 		{
@@ -99,7 +109,7 @@ int InsertJourneyData()
 			string sql =
 				common::format("INSERT INTO journey_date (date, user_id, time_id, distance, journey_time)"
 					" VALUES ('%s', '%d', '%I64u', '%f', '%f');"
-					, strDateTime.c_str(), 1, row.dateTime, 0, 0);
+					, strDateTime.c_str(), 1, row.dateTime, totDistance, 0);
 
 			MySQLQuery query(&sqlCon, sql);
 			query.ExecuteInsert();
@@ -109,4 +119,22 @@ int InsertJourneyData()
 
 	std::cout << "finish~\n";
 	return 1;
+}
+
+
+// return distance lonLat0 - lonLat2
+// http://www.movable-type.co.uk/scripts/latlong.html
+double WGS84Distance(const Vector2d &lonLat0, const Vector2d &lonLat1)
+{
+	const double r = 6371000.f;
+	const double lat0 = ANGLE2RAD2(lonLat0.y);
+	const double lat1 = ANGLE2RAD2(lonLat1.y);
+	const double dlat = ANGLE2RAD2(abs(lonLat0.y - lonLat1.y));
+	const double dlon = ANGLE2RAD2(abs(lonLat0.x - lonLat1.x));
+
+	const double a = sin(dlat / 2.f) * sin(dlat / 2.f)
+		+ cos(lat0) * cos(lat1) * sin(dlon / 2.f) * sin(dlon / 2.f);
+	const double c = 2 * atan2(sqrt(a), sqrt(1.f - a));
+	const double d = r * c;
+	return d;
 }
