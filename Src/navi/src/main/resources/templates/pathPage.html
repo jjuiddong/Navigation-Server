@@ -28,9 +28,27 @@
 
 <body>
 
-<h1>~ Welcome ~ Navigation Web</h1>
+<div class="ui large fixed menu">
+  <div class="item">
+    <img src="https://semantic-ui.com/images/logo.png">
+  </div>
+  <a class="active item">
+    Journey
+  </a>
+  <a class="item" th:href="@{live}">
+    Live Journey!
+  </a>
+  <div class="right menu">
+    <div class="item">
+        <div class="ui primary button">Sign Up</div>
+    </div>
+  </div>
+</div>
 
-<div id="map" style="width:1000px;height:500px;"></div>
+<h3>~ welcome navi web ~</h3>
+	
+<div class="ui vertical segment" style="padding:0px;">
+<div id="map" style="width:1000px;height:500px;text-align:center;"></div>
 	<script th:inline="javascript">
 		var container = document.getElementById('map');
 		var options = {
@@ -74,7 +92,7 @@
 				        	var data = JSON.parse(this.responseText);
 							var linePath = [];
 				            var i;
-				            for(i = 0; i < data.length && i < 5180; i++) 
+				            for(i = 0; i < data.length; i++) 
 				            	linePath[i] = new kakao.maps.LatLng(data[i].lat, data[i].lon);
 	
 				    		var polyline = new kakao.maps.Polyline({
@@ -86,11 +104,9 @@
 				    		});
 				    		
 				    		polyline.setMap(map);
-				    		polylines.set(journeyTimeId, polyline);
-				    		
-				    		var distance = Math.round(polyline.getLength());
-				    		alert(distance);
-				    		
+				    		polylines.set(journeyTimeId, polyline);				    		
+				    		//var distance = Math.round(polyline.getLength());
+				    		//alert(distance);				    		
 				        }
 				    }
 					xmlHttp.open("GET", "/path/" + journeyId + '/' + journeyTimeId, true);
@@ -108,63 +124,82 @@
 		}
 		
 	</script>
-
-
-<!-- <h3>Path List</h3> -->
-
-<div id="list" style="width:1000px;height:600px;overflow:auto;padding:10px;">
-	<table class="ui celled striped table">
-	  <thead>
-	    <tr><th>Show</th>
-	    <th>Number</th>
-	    <th>Date</th>
-	    <th>User</th>
-	    <th>Distance (Km)</th>
-	    <th>Journey Time</th>
-	  </tr></thead>
-	  
-	  <tbody th:each="journey : ${journeys}">
-	    <tr class="center aligned">
-	      <td class="collapsing">
-	        <div class="ui fitted slider checkbox">
-	          <input type="checkbox" name="showChk"
-	          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}')|"></input><label></label>
-	        </div>
-	      </td>
-      	    
-	      <td data-label="Number" th:text="${journey.id}"></td>
-	      <td data-label="Date" th:text="${journey.date}"></td>
-	      <td data-label="User" th:text="${journey.userId}"></td>
-	      <td data-label="Distance" th:text="${journey.distance/1000}"></td>
-	      <td data-label="Journey Time" th:text="${journey.journeyTime}"></td>
-	    </tr>
-	  </tbody>
-
-	  <tfoot>
-	    <tr><th colspan="6">
-		<div class="ui right floated pagination menu"		
-			th:with="step = 5, left=${pageNumbers[0] - step}, right=${pageNumbers[0] + step}">
-			
-		 	<a class="icon item" th:href="@{/pathPage(size=${page.size}, page=${left})}">
-	          <i class="left chevron icon"></i>
-	        </a>
-	        
-	        <th:block th:each="pageNumber : ${pageNumbers}">
-			    <a 	th:class="${pageNumber==page.number + 1} ? 'item active' : 'item'"
-			    	th:href="@{/pathPage(size=${page.size}, page=${pageNumber})}"
-			        th:text=${pageNumber}>
-		        </a>
-	        </th:block>
-	        
-	        <a class="icon item" th:href="@{/pathPage(size=${page.size}, page=${right})}">
-	          <i class="right chevron icon"></i>
-	        </a>
-		</div>	  
-	  </tr></tfoot>
-	  
-
-	</table>
 </div>
+
+<div class="ui vertical segment" style="padding:3px; text-align:left;">
+	<div class="ui animated orange button" tabindex="0" onclick="location.href='live'">
+	  <div class="visible content">Live Today Journey!</div>
+	  <div class="hidden content">
+	    <i class="right arrow icon"></i>
+	  </div>
+	</div>
+</div>
+
+<div class="ui vertical segment" style="padding:0px;">
+
+	<div id="list" style="width:1000px;">	
+		<table class="ui celled striped table">
+		  <thead>
+		    <tr><th>Show</th>
+		    <th>Number</th>
+		    <th>Date</th>
+		    <th>User</th>
+		    <th>Distance</th>
+		    <th>Journey Time</th>
+		  </tr></thead>
+		  
+		  <tbody th:each="journey : ${journeys}">
+		    <tr class="center aligned">
+		      <td class="collapsing">
+		        <div class="ui fitted slider checkbox">
+		          <input type="checkbox" name="showChk"
+		          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}')|"></input><label></label>
+		        </div>
+		      </td>
+	      	    
+		      <td data-label="Number" th:text="${journey.id}"></td>
+		      <td data-label="Date" th:text="${journey.date}"></td>
+		      <td data-label="User" th:text="${journey.userId}"></td>
+		      <td data-label="Distance" th:text="|${#numbers.formatDecimal(journey.distance/1000,1,1)} Km|"></td>
+		      <td data-label="Journey Time"
+		       	th:text="|${#numbers.formatDecimal(journey.journeyTime/(1000*60*60),1,1)} Hour|"></td>
+		    </tr>
+		  </tbody>
+	
+		  <tfoot>
+		    <tr><th colspan="6">
+			<div class="ui right floated pagination menu"		
+				th:with="step = 5, left=${pageNumbers[0] - step}, right=${pageNumbers[0] + step}">
+				
+			 	<a class="icon item" th:href="@{/pathPage(size=${page.size}, page=${left})}">
+		          <i class="left chevron icon"></i>
+		        </a>
+		        
+		        <th:block th:each="pageNumber : ${pageNumbers}">
+				    <a 	th:class="${pageNumber==page.number + 1} ? 'item active' : 'item'"
+				    	th:href="@{/pathPage(size=${page.size}, page=${pageNumber})}"
+				        th:text=${pageNumber}>
+			        </a>
+		        </th:block>
+		        
+		        <a class="icon item" th:href="@{/pathPage(size=${page.size}, page=${right})}">
+		          <i class="right chevron icon"></i>
+		        </a>
+			</div>	  
+		  </tr></tfoot>
+		  
+	
+		</table>
+	</div>
+
+</div>
+<div class="ui vertical segment">
+  <p></p>
+</div>
+
+
+
+
 
 <!-- 
 	<div class="ui centered grid">

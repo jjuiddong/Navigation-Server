@@ -23,18 +23,9 @@ public class JourneyDateService {
 	
 	public Page<JourneyDate> getJourneyDateList(Pageable pageable) 
 	{		
-		//int page = (pageable.getPageNumber() == 0)? 0 : pageable.getPageNumber() - 1;
-//		int currentPage = pageable.getPageNumber();
-//		int pageSize = pageable.getPageSize();
-//		pageable = PageRequest.of(currentPage,  pageSize);
 		return journeyDateRepo.findAllByOrderByTimeIdDesc(pageable);
-		
-//		List<JourneyDate> list = JourneyDateRepo.findAllByOrderByTimeIdDesc();
-//		Page<JourneyDate> journeyPage 
-//			= new PageImpl<JourneyDate>(list, pageable, list.size());
-//		return journeyPage;		
 	}
-	
+
 	public List<JourneyDate> findAll() {
 		return journeyDateRepo.findAll();
 	}

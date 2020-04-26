@@ -67,6 +67,7 @@ int InsertPathData()
 }
 
 
+// upload journey_date table data
 int InsertJourneyData()
 {
 	list<string> exts;
@@ -97,6 +98,15 @@ int InsertJourneyData()
 			totDistance += d;
 		}
 
+		double journeyTime = 0;
+		if (!path.m_table.empty())
+		{
+			cPath::sRow first = path.m_table.front();
+			cPath::sRow last = path.m_table.back();
+			cDateTime2 dt = cDateTime2(last.dateTime) - cDateTime2(first.dateTime);
+			journeyTime = (double)dt.m_t;
+		}
+
 		std::cout << "upload " << fileName << "\n";
 		for (auto &row : path.m_table)
 		{
@@ -109,7 +119,7 @@ int InsertJourneyData()
 			string sql =
 				common::format("INSERT INTO journey_date (date, user_id, time_id, distance, journey_time)"
 					" VALUES ('%s', '%d', '%I64u', '%f', '%f');"
-					, strDateTime.c_str(), 1, row.dateTime, totDistance, 0);
+					, strDateTime.c_str(), 1, row.dateTime, totDistance, journeyTime);
 
 			MySQLQuery query(&sqlCon, sql);
 			query.ExecuteInsert();

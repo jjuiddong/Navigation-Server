@@ -1,3 +1,8 @@
+//
+// pathForm, pathPage web page control
+//
+//
+
 package navi.app;
 
 import java.util.List;
@@ -20,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import navi.model.JourneyDate;
 import navi.service.JourneyDateService;
 import navi.service.PathService;
+
 
 @Controller
 public class PathController {
@@ -71,6 +77,14 @@ public class PathController {
         }
 		
 		return "pathPage";
+	}
+	
+	
+	// live-page page /live
+	@RequestMapping("live")
+	String live(Model model) 
+	{		
+		return "live";
 	}
 	
 }

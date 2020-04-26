@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+
+	<link rel="stylesheet" type="text/css" href="semantic/semantic.css">
+	<script
+	  src="assets/library/jquery.min.js"
+	  ></script>
+	<script src="semantic/semantic.js"></script>
+	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=685fb6d52e9558eb55705c0b663c66bd&libraries=services,clusterer,drawing"></script>
+
+<meta charset="UTF-8">
+<title>Journey Live!</title>
+
+    <style>
+        .column {
+            border: 1px solid gray;
+            text-align : center;
+        }
+        h1,h2 {
+        	text-align : center;
+        }
+    </style>
+    
+</head>
+
+<body>
+
+<div class="ui large fixed menu">
+  <div class="item">
+    <img src="https://semantic-ui.com/images/logo.png">
+  </div>
+  <a class="item" th:href="@{pathPage}">
+    Journey
+  </a>
+  <a class="active item">
+    Live Journey!
+  </a>
+  <div class="right menu">
+    <div class="item">
+        <div class="ui primary button">Sign Up</div>
+    </div>
+  </div>
+</div>
+
+
+<h3>~ welcome navigation web ~</h3>
+
+<div class="ui toggle checkbox">
+  <input type="checkbox" name="traceChk" checked="checked">
+  <label>Trace Center</label>
+</div>
+
+<button class="ui icon button" style="float:right;" onclick="onClearButton()">
+  <i class="erase icon"></i>
+</button>
+
+
+<div id="map" style="width:1000px;height:1000px;text-align:center;"></div>
+
+	<script th:inline="javascript">
+		var container = document.getElementById('map');
+		var options = {
+			center: new kakao.maps.LatLng(36.450701, 126.570667),
+			level: 13
+		};
+
+		var map = new kakao.maps.Map(container, options);
+		var polyline; // kakao.map.PolyLine
+		var linePath = []; // total journey path		
+		var userId = 1;
+
+		// initialize kakaomap
+		function init() {
+			resizeMap();
+			initialPath();
+			setInterval("updatePath()", 10000); // 10 seconds
+		}
+		
+		function initialPath() {			
+			var xmlHttp = new XMLHttpRequest();
+		   	xmlHttp.onreadystatechange = function() 
+		   	{ 
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+		        {
+		        	var data = JSON.parse(this.responseText);
+		            var i;
+		            for(i = 0; i < data.length; i++) 
+		            	linePath.push(new kakao.maps.LatLng(data[i].lat, data[i].lon));
+
+		    		polyline = new kakao.maps.Polyline({
+		    		    path: linePath,
+		    		    strokeWeight: 5,
+		    		    strokeColor: '#FF0000',
+		    		    strokeOpacity: 1.0,
+		    		    strokeStyle: 'solid'
+		    		});
+		    		
+		    		polyline.setMap(map);
+		        }
+		    }		   	
+			xmlHttp.open("GET", "/pathInit?userid=" + userId, true);			
+			xmlHttp.send(null);
+		}
+		
+		
+		function updatePath() {
+			var xmlHttp = new XMLHttpRequest();
+		   	xmlHttp.onreadystatechange = function() 
+		   	{ 
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+		        {
+		        	var data = JSON.parse(this.responseText);
+		            var i;
+		            for(i = 0; i < data.length; i++)
+		            	linePath.push(new kakao.maps.LatLng(data[i].lat, data[i].lon));
+		            polyline.setPath(linePath);
+
+		            // move camera
+		            var chkbox = document.getElementsByName('traceChk');
+		            if (chkbox[0].checked && (data.length > 0))
+	            	{
+		                map.panTo(
+		                		new kakao.maps.LatLng(data[data.length-1].lat, data[data.length-1].lon));
+	            	}
+		        }
+		    }
+			xmlHttp.open("GET", "/pathUpdate?userid=" + userId, true);			
+			xmlHttp.send(null);
+		}
+		
+		function onClearButton() {
+			linePath = [];
+			polyline.setPath(linePath);
+		}
+		
+		// full window map
+		function resizeMap() {
+		    var mapContainer = document.getElementById('map');
+		    var width = window.innerWidth;
+		    var height = window.innerHeight;
+		    mapContainer.style.width = width + "px";
+		    mapContainer.style.height = height - 70 + "px";
+		    map.relayout();
+		}
+		
+		// window resize event
+        function onWindowResize() {
+        	resizeMap();
+        }  
+        
+
+	window.addEventListener( 'resize', onWindowResize, false );
+    window.onload = init;
+	
+	</script>
+
+</body>
+</html>

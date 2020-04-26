@@ -2,6 +2,7 @@ package navi.model;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -22,7 +23,7 @@ public class Path implements Serializable {
 	public Long id;
 	
 	@Column(name = "date_time", columnDefinition = "DATETIME")
-	public LocalDate dateTime;
+	public LocalDateTime dateTime;
 	
 	@Column(name = "user_id")
 	public Long userId;
