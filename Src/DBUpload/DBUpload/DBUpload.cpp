@@ -6,14 +6,16 @@
 
 int InsertPathData();
 int InsertJourneyData();
+bool QueryInsertPathData(MySQLConnection &sqlCon, cPath::sRow &row
+	, const unsigned __int64 journeyTimeId);
 double WGS84Distance(const Vector2d &lonLat0, const Vector2d &lonLat1);
 
 
 int main()
 {
     std::cout << "navi DB Upload!\n"; 
-	//InsertPathData();
-	InsertJourneyData();
+	InsertPathData();
+	//InsertJourneyData();
 
 	return 0;
 }
@@ -43,22 +45,19 @@ int InsertPathData()
 		std::cout << "upload " << fileName << "\n";
 		const unsigned __int64 journeyTimeId = path.m_table.empty() ? 0 : path.m_table[0].dateTime;
 
-		for (auto &row : path.m_table)
+		for (uint i=1; i < path.m_table.size(); ++i)
 		{
-			const float speed = 0.f;
-			const float altitude = 0.f;
+			{
+				cPath::sRow &r0 = path.m_table[i - 1];
+				cPath::sRow &r1 = path.m_table[i];
+				const double d = WGS84Distance(r0.lonLat, r1.lonLat);
+				if (d > 500)
+					continue; // maybe lon/lat data crack
+			}
 
-			cDateTime2 dateTime;
-			Str32 strDateTime = dateTime.GetTimeStr3(row.dateTime);
-
-			string sql =
-				common::format("INSERT INTO path (date_time, user_id, journey_time_id, lon, lat, speed, altitude)"
-					" VALUES ('%s', '%d', '%I64u', '%f', '%f', '%f', '%f');"
-					, strDateTime.c_str()
-					, 1, journeyTimeId, row.lonLat.x, row.lonLat.y, speed, altitude);
-
-			MySQLQuery query(&sqlCon, sql);
-			query.ExecuteInsert();
+			if (i==1)
+				QueryInsertPathData(sqlCon, path.m_table[0], journeyTimeId);
+			QueryInsertPathData(sqlCon, path.m_table[i], journeyTimeId);
 		}
 	}
 
@@ -92,17 +91,19 @@ int InsertJourneyData()
 		double totDistance = 0; // total journey distance
 		for (uint i = 1; i < path.m_table.size(); ++i)
 		{
-			cPath::sRow r0 = path.m_table[i - 1];
-			cPath::sRow r1 = path.m_table[i];
+			cPath::sRow &r0 = path.m_table[i - 1];
+			cPath::sRow &r1 = path.m_table[i];
 			const double d = WGS84Distance(r0.lonLat, r1.lonLat);
+			if (d > 500)
+				continue; // maybe lon/lat data crack
 			totDistance += d;
 		}
 
 		double journeyTime = 0;
 		if (!path.m_table.empty())
 		{
-			cPath::sRow first = path.m_table.front();
-			cPath::sRow last = path.m_table.back();
+			cPath::sRow &first = path.m_table.front();
+			cPath::sRow &last = path.m_table.back();
 			cDateTime2 dt = cDateTime2(last.dateTime) - cDateTime2(first.dateTime);
 			journeyTime = (double)dt.m_t;
 		}
@@ -129,6 +130,28 @@ int InsertJourneyData()
 
 	std::cout << "finish~\n";
 	return 1;
+}
+
+
+
+bool QueryInsertPathData(MySQLConnection &sqlCon, cPath::sRow &row
+	, const unsigned __int64 journeyTimeId)
+{
+	const float speed = 0.f;
+	const float altitude = 0.f;
+
+	cDateTime2 dateTime;
+	Str32 strDateTime = dateTime.GetTimeStr3(row.dateTime);
+
+	string sql =
+		common::format("INSERT INTO path (date_time, user_id, journey_time_id, lon, lat, speed, altitude)"
+			" VALUES ('%s', '%d', '%I64u', '%f', '%f', '%f', '%f');"
+			, strDateTime.c_str()
+			, 1, journeyTimeId, row.lonLat.x, row.lonLat.y, speed, altitude);
+
+	MySQLQuery query(&sqlCon, sql);
+	query.ExecuteInsert();
+	return true;
 }
 
 

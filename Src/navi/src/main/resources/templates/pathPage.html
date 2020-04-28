@@ -52,7 +52,8 @@
 	<script th:inline="javascript">
 		var container = document.getElementById('map');
 		var options = {
-			center: new kakao.maps.LatLng(36.450701, 126.570667),
+			center: new kakao.maps.LatLng(36.625109, 128.033937),
+					//36.450701, 126.570667),
 			level: 13
 		};
 
@@ -106,11 +107,15 @@
 				    		polyline.setMap(map);
 				    		polylines.set(journeyTimeId, polyline);				    		
 				    		//var distance = Math.round(polyline.getLength());
-				    		//alert(distance);				    		
+				    		//alert(distance);
+				    		
+				    		// move to first position
+				    		if (data.length > 0)
+			                	map.panTo(new kakao.maps.LatLng(data[0].lat, data[0].lon));				    		
 				        }
 				    }
 					xmlHttp.open("GET", "/path/" + journeyId + '/' + journeyTimeId, true);
-					xmlHttp.send(null);			   	
+					xmlHttp.send(null);
 				}				
 			}
 			else
