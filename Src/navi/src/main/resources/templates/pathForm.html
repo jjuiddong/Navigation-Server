@@ -48,41 +48,106 @@
 
 <!-- <h3>Path List</h3> -->
 
-<div id="list" style="width:1000px;height:500px;overflow:auto;padding:10px;">
-	<table class="ui celled striped table">
-	  <thead>
-	    <tr><th>Show</th>
-	    <th>Number</th>
-	    <th>Date</th>
-	    <th>User</th>
-	    <th>Distance</th>
-	    <th>Journey Time</th>
-	  </tr></thead>
-	  
+<div id="list" style="width:1000px;height:600px;overflow:auto;padding:10px;">
+
+	 <script th:inline="javascript">
+	 	function pageLeft() {
+	 		alert('page left');
+	 	}
+	 	function pageRight() {
+	 		//alert('page right');
+	 		//var startPage = $('#startPage').val;
+	 		//var startPage =  "[[${startPage}]]";
+	 		//alert(startPage);
+	 		
+	 		//@Model.startPage = 3;
+	 		
+	 		
+	 		var data = {};
+			data.firstName = "John2";
+			data.lastName  = "Snow2";
+			var json = JSON.stringify(data);
+	 		
+			var xmlHttp = new XMLHttpRequest();
+		   	xmlHttp.onreadystatechange = function() 
+		   	{ 
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+		        {
+		        	alert(xmlHttp.responseText);		        	
+		        }
+		    }
+			xmlHttp.open("PUT", "/pathTable", true);
+			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
+			xmlHttp.send(json);
+			
+	 		
+	 	}		  	
+	 	
+	 	function pageClick(pageNum) {
+	 		
+	 		//@("table_list").load(window.location.href + "table_list");
+	 		//$('#table_list').load("/pathTableList?page=2&size=10").fadeIn("slow");
+	 		//$('#table_list').load("/pathTableList?page=2&size=10").fadeIn("slow");
+	 		$('#table_list').load(window.location.href + '?page=' + pageNum + ' #table_list').fadeIn("slow");
+
+	 	}
+	 	
+	 </script>
 
 
-	</table>
-</div>
-
-<!-- 
-	<div class="ui centered grid">
-		<div class="eight column row">  Hello NaviWebServer  </div>
-		<div class="one wide column">Number</div>
-		<div class="three wide column">Date</div>
-		<div class="three wide column">User</div>
-		<div class="three wide column">Distance</div>
-		<div class="three wide column">Journey Time</div>
+	<div id="table_list" >
+		<table class="ui celled striped table">
+		  <thead>
+		    <tr><th>Show</th>
+		    <th>Number</th>
+		    <th>Date</th>
+		    <th>User</th>
+		    <th>Distance</th>
+		    <th>Journey Time</th>
+		  </tr></thead>
+		  
+			  <tbody th:each="num : ${#numbers.sequence(first,last)}"
+			  		 th:with="journey = ${journeys[num]},">
+			    <tr class="center aligned">
+			      <td class="collapsing">
+			        <div class="ui fitted slider checkbox">
+			          <input type="checkbox" name="showChk"
+			          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}')|"></input><label></label>
+			        </div>
+			      </td>
+		      	    
+			      <td data-label="Number" th:text="${journey.id}"></td>
+			      <td data-label="Date" th:text="${journey.date}"></td>
+			      <td data-label="User" th:text="${journey.userId}"></td>
+			      <td data-label="Distance" th:text="|${#numbers.formatDecimal(journey.distance/1000,1,1)} Km|"></td>
+			      <td data-label="Journey Time"
+			       	th:text="|${#numbers.formatDecimal(journey.journeyTime/(1000*60*60),1,1)} Hour|"></td>
+			    </tr>
+			  </tbody>
+		  
+			  <tfoot>
+			    <tr><th colspan="6">
+				<div class="ui right floated pagination menu">
+					<a class="icon item" th:onclick="pageLeft()">
+			          <i class="left chevron icon"></i>
+			         </a>
+			        
+			        <th:block th:each="num : ${#numbers.sequence(startPage,endPage)}">
+					    <a 	class="item" th:onclick="|pageClick('${num}')|"
+					        th:text=${num}>
+				        </a>
+			        </th:block>
+			        
+			        <a class="icon item" th:onclick="pageRight()">
+			          <i class="right chevron icon" ></i>
+			        </a>
+				</div>	  
+			  </tr></tfoot>
+	
+		</table>
 	</div>
 	
-	<div class="ui centered grid" th:each="journey : ${journeys}">	
-		<div class="one wide column" th:text="${journey.id}"></div>
-		<div class="three wide column" th:text="${journey.date}"></div>
-		<div class="three wide column" th:text="${journey.userName}"></div>
-		<div class="three wide column" th:text="${journey.distance}"></div>
-		<div class="three wide column" th:text="${journey.journeyTime}"></div>		
-	</div>	
- -->	
-
+</div>
 
 </body>
 </html>

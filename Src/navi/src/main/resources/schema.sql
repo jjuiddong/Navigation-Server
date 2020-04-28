@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS journey_date (
 	time_id int8 unsigned NOT NULL,	
 	distance float4,
 	journey_time float4,
+	checked int4,
 	PRIMARY KEY (id)
 );
 

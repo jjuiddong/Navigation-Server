@@ -36,4 +36,7 @@ public class JourneyDate implements Serializable {
 	@Column(name = "journey_time")
 	public float journeyTime;
 	
+	@Column(name = "checked")
+	public int checked;
+	
 }

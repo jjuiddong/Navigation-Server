@@ -62,22 +62,9 @@
 		
 
 		// journey checkbox clicked
-		function checkClick(journeyId, journeyTimeId) {
-
-		    var journeys =/*[[${journeys}]]*/null;  // mapping from thymeleaf
-			var chkIdx = 0;
-			var i = 0;
-			for (i=0; i < journeys.length; ++i)
-			{
-				if (journeys[i].id == journeyId)
-				{
-					chkIdx = i;
-					break;
-				}			
-			}
+		function checkClick(journeyId, journeyTimeId, checked) {
 			
-			var chkbox = document.getElementsByName('showChk');
-			if (chkbox[chkIdx].checked)
+			if (checked)
 			{
 				if (polylines.has(journeyTimeId) == true)
 				{
@@ -116,7 +103,7 @@
 				    }
 					xmlHttp.open("GET", "/path/" + journeyId + '/' + journeyTimeId, true);
 					xmlHttp.send(null);
-				}				
+				}
 			}
 			else
 			{
@@ -125,8 +112,30 @@
 					polylines.get(journeyTimeId).setMap(null);
 					polylines.delete(journeyTimeId);				
 				}
-			}			
+			}
+			
+			// send show/hide check info
+			{
+				var data = {};
+				data.journeyId = journeyId;
+				data.journeyTimeId = journeyTimeId;
+				data.checked = Number(checked);
+				
+				var json = JSON.stringify(data);
+				var xhr = new XMLHttpRequest();
+				xhr.open("PUT", 'pathShow', true);
+				xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
+				xhr.send(json);
+			}				
 		}
+		
+		
+		function pageRefresh(page, size) {
+			$('#list')
+				.load(window.location.href + '?page=' + page + '&size=' + size + ' #list')
+				.fadeIn("slow");			
+		}
+	
 		
 	</script>
 </div>
@@ -158,7 +167,8 @@
 		      <td class="collapsing">
 		        <div class="ui fitted slider checkbox">
 		          <input type="checkbox" name="showChk"
-		          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}')|"></input><label></label>
+		          	th:checked="${journey.checked}"
+		          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}', checked)|"></input><label></label>
 		        </div>
 		      </td>
 	      	    
@@ -176,18 +186,18 @@
 			<div class="ui right floated pagination menu"		
 				th:with="step = 5, left=${pageNumbers[0] - step}, right=${pageNumbers[0] + step}">
 				
-			 	<a class="icon item" th:href="@{/pathPage(size=${page.size}, page=${left})}">
+			 	<a class="icon item" th:onclick="|pageRefresh(${left}, ${page.size})|">
 		          <i class="left chevron icon"></i>
 		        </a>
 		        
 		        <th:block th:each="pageNumber : ${pageNumbers}">
 				    <a 	th:class="${pageNumber==page.number + 1} ? 'item active' : 'item'"
-				    	th:href="@{/pathPage(size=${page.size}, page=${pageNumber})}"
+				    	th:onclick="|pageRefresh(${pageNumber}, ${page.size})|"
 				        th:text=${pageNumber}>
 			        </a>
 		        </th:block>
 		        
-		        <a class="icon item" th:href="@{/pathPage(size=${page.size}, page=${right})}">
+		        <a class="icon item" th:onclick="|pageRefresh(${right}, ${page.size})|">
 		          <i class="right chevron icon"></i>
 		        </a>
 			</div>	  
@@ -201,29 +211,6 @@
 <div class="ui vertical segment">
   <p></p>
 </div>
-
-
-
-
-
-<!-- 
-	<div class="ui centered grid">
-		<div class="eight column row">  Hello NaviWebServer  </div>
-		<div class="one wide column">Number</div>
-		<div class="three wide column">Date</div>
-		<div class="three wide column">User</div>
-		<div class="three wide column">Distance</div>
-		<div class="three wide column">Journey Time</div>
-	</div>
-	
-	<div class="ui centered grid" th:each="journey : ${journeys}">	
-		<div class="one wide column" th:text="${journey.id}"></div>
-		<div class="three wide column" th:text="${journey.date}"></div>
-		<div class="three wide column" th:text="${journey.userName}"></div>
-		<div class="three wide column" th:text="${journey.distance}"></div>
-		<div class="three wide column" th:text="${journey.journeyTime}"></div>		
-	</div>	
- -->	
 
 
 </body>
