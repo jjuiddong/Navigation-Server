@@ -1,6 +1,7 @@
 package navi.app;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 //import java.util.ArrayList;
 import java.util.List;
 //import java.util.Optional;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import navi.model.JourneyDate;
 //import navi.model.JourneyDate;
 import navi.model.Path;
 import navi.service.JourneyDateService;
@@ -43,21 +45,13 @@ public class PathRestController {
 	public @ResponseBody List<Path> path( @PathVariable Long journeyId
 			, @PathVariable Long journeyTimeId ) 
 	{
-		
-		logger.info("path request = " + journeyId + ", " + journeyTimeId);
-		
-		List<Path> list = pathService.pathRepo.findByJourneyTimeId(journeyTimeId);
-		return list;		
-
-//		Optional<JourneyDate> journey = journeyDateService.JourneyDateReop.findById(journeyId);
-//		if (journey.get() != null)
-//		{
-//			JourneyDate j = journey.get();
-//			List<Path> list = pathService.pathRepo.findByDateTimeBetween(
-//					j.date, j.date.plusDays(1));
-//			return list;
-//		}
-//		return new ArrayList<Path>();
+		Optional<JourneyDate> journey = journeyDateService.findById(journeyId);
+		if (journey.get() != null)
+		{
+			List<Path> list = pathService.pathRepo.findByJourneyTimeId(journey.get().timeId);
+			return list;		
+		}
+		return new ArrayList<Path>();
 	}
 	
 	
@@ -89,6 +83,7 @@ public class PathRestController {
 		LocalDateTime now = LocalDateTime.now();
 		List<Path> list = pathService.pathRepo.findByDateTimeBetween(userRefreshTime, now);
 		userRefreshTime = now;
+
 		
 //		LocalDateTime date1 = userRefreshTime;		
 //		date1 = date1.plusMinutes(1);
@@ -96,14 +91,5 @@ public class PathRestController {
 //		userRefreshTime = userRefreshTime.plusMinutes(1);
 		return list; 
 	}
-	
-	
-//	// ex) pathTable
-//	@RequestMapping(value = "pathTable", method = RequestMethod.PUT)
-//	//@ResponseStatus(HttpStatus.NO_CONTENT)
-//	public @ResponseBody String pathTable( @RequestBody PageData page ) 
-//	{		
-//		return "ok";
-//	}
 	
 }

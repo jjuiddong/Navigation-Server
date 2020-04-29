@@ -5,6 +5,8 @@
 
 package navi.app;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -26,10 +28,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.ModelAndView;
 
-import navi.model.CheckData;
+import navi.Packet.ReqCheckData;
+import navi.Packet.ReqDetailJourneyInfo;
 import navi.model.JourneyDate;
+import navi.model.Path;
 import navi.service.JourneyDateService;
-import navi.service.PathService;
 
 
 @Controller
@@ -40,33 +43,6 @@ public class PathController {
 	
 	final int showListCount = 10;
 	final int showPageCount = 5;
-	
-
-	// default path-list page
-//	@RequestMapping("pathForm")
-//	String listPath(Model model) {
-//		
-//		List<JourneyDate> journeys = journeyDateService.findAllBySort();
-//		model.addAttribute("journeys", journeys);
-//		
-//	  	int currentPage = 1;
-//		int first = 0;
-//		int last = (journeys.size() > showListCount)? (showListCount-1) : journeys.size() - 1;
-//	  	int totalPages = (journeys.size() / showListCount) + 1;
-//        int startPage = ((currentPage-1) / showPageCount * showPageCount) + 1;
-//       	int endPage = (startPage + (showPageCount-1) > totalPages)? totalPages 
-//       			: startPage + (showPageCount-1);
-//
-//		model.addAttribute("currentPage", 1);
-//		model.addAttribute("first", first);
-//		model.addAttribute("last", last);
-//		model.addAttribute("totalPages", totalPages);
-//		model.addAttribute("startPage", startPage);
-//		model.addAttribute("endPage", endPage);		
-//		
-//		return "pathForm";
-//	}
-	
 	
 	// default path-list page
 	@RequestMapping("pathForm")
@@ -115,6 +91,7 @@ public class PathController {
 				PageRequest.of(currentPage - 1, pageSize));
 		model.addAttribute("page", journeys);
 		model.addAttribute("journeys", journeys.getContent());
+		model.addAttribute("detail", new JourneyDate()); // temporal data
 
         int curTotalPages = journeys.getTotalPages();
         if (curTotalPages > 0) {
@@ -137,9 +114,20 @@ public class PathController {
 		return "live";
 	}
 	
+	
+	// detail-page page /live
+	@RequestMapping("detail")
+	String detail(Model model) 
+	{		
+		List<JourneyDate> journeys = journeyDateService.findAllBySort();
+		model.addAttribute("journeys", journeys);
+		return "detail";
+	}
+	
+	
 	// path show/hide check
 	@RequestMapping(value = "pathShow", method = RequestMethod.PUT)
-	@ResponseBody String pathShow(@RequestBody CheckData chkData) 
+	@ResponseBody String pathShow(@RequestBody ReqCheckData chkData) 
 	{
 		Optional<JourneyDate> journey = journeyDateService.findById(chkData.journeyId);
 		if (journey.get() != null)
@@ -147,8 +135,46 @@ public class PathController {
 			journey.get().checked = chkData.checked;
 			journeyDateService.save(journey.get());			
 		}
-		
 		return "ok";
+	}
+	
+	
+	// show journey detail info 
+	@RequestMapping(value = "showDetail", method = RequestMethod.PUT)
+	@ResponseBody String showDetail(@RequestBody ReqDetailJourneyInfo journeyInfo
+			, Model model) 
+	{
+		Optional<JourneyDate> journey = journeyDateService.findById(journeyInfo.journeyId);
+		if (journey.get() != null)
+		{
+			model.addAttribute("detail", journey.get());
+		}
+		return "ok";
+	}
+	
+	
+	// journey popup page /journeyPopup?journeyId=1&journeyTimeId=10
+	@RequestMapping(value = "journeyPopup/{journeyId}/{journeyTimeId}", method = RequestMethod.GET)
+	public String journeyPopup( @PathVariable Long journeyId, 
+			@PathVariable Long journeyTimeId,
+			Model model )
+	{		
+		return "journeyPopup";
+	}
+	
+	
+	// request today journey data
+	@RequestMapping(value = "todayJourneyInfo", method = RequestMethod.GET)
+	@ResponseBody List<JourneyDate> todayJourneyInfo(@RequestParam("user") Optional<Integer> userId) 
+	{
+		//LocalDateTime now = LocalDateTime.of(2020, 4, 24, 0, 0, 0);
+		LocalDateTime now = LocalDateTime.now();
+		
+		LocalDate date0 = now.toLocalDate();
+		LocalDate date1 = date0.plusDays(1);
+		List<JourneyDate> list = journeyDateService.findByDate(date0, date1);
+		return list;
 	}	
+	
 	
 }

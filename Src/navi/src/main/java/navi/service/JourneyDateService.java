@@ -1,5 +1,7 @@
 package navi.service;
 
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,6 +41,11 @@ public class JourneyDateService {
 	public Optional<JourneyDate> findById(Long journeyId) {
 		return journeyDateRepo.findById(journeyId);
 	}
+	
+	public List<JourneyDate> findByDate(LocalDate date0, LocalDate date1) {
+		return journeyDateRepo.findByDateBetween(date0,  date1);
+	}
+	
 	
 	public long getCount() {
 		return journeyDateRepo.count();

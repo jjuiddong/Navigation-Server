@@ -22,6 +22,27 @@
         h1,h2 {
         	text-align : center;
         }
+        
+	.label {margin-bottom: 96px;}
+	.label * {display: inline-block;vertical-align: top;}
+	.label .left {background: url("https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_l.png") no-repeat;display: inline-block;height: 64px;overflow: hidden;vertical-align: top;width: 7px;}
+	.label .center {background: url(https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_bg.png) repeat-x;display: inline-block;height: 64px;font-size: 24px;line-height:24px;}
+	.label .right {background: url("https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_r.png") -1px 0  no-repeat;display: inline-block;height: 64px;overflow: hidden;width: 6px;}
+	.overlay {
+	    position:absolute;
+	    left: -50px;
+	    top:0;
+	    width:100px;
+	    height: 100px;
+	    background: #fff;
+	    border:1px solid #ccc;
+	    border-radius: 5px;
+	    padding:5px;
+	    font-size:24px;
+	    text-align: center;
+	    white-space: pre;
+	    word-wrap: break-word;
+	}        
     </style>
     
 </head>
@@ -38,6 +59,9 @@
   <a class="active item">
     Live Journey!
   </a>
+  <a class="item" th:href="@{detail}">
+    Detail
+  </a>
   <div class="right menu">
     <div class="item">
         <div class="ui primary button">Sign Up</div>
@@ -47,15 +71,6 @@
 
 
 <h3>~ welcome navigation web ~</h3>
-
-<div class="ui toggle checkbox">
-  <input type="checkbox" name="traceChk" checked="checked">
-  <label>Trace Center</label>
-</div>
-
-<button class="ui icon button" style="float:right;" onclick="onClearButton()">
-  <i class="erase icon"></i>
-</button>
 
 
 <div id="map" style="width:1000px;height:1000px;text-align:center;"></div>
@@ -67,19 +82,37 @@
 			level: 13
 		};
 
-		var map = new kakao.maps.Map(container, options);
-		var polyline; // kakao.map.PolyLine
-		var linePath = []; // total journey path		
-		var userId = 1;
+		var _map = new kakao.maps.Map(container, options);
+		var _polyline; // kakao.map.PolyLine
+		var _linePath = []; // total journey path
+		var _markers = [];
+		var _timeLines = [];
+		var _overlay; // information overlay
+		var _userId = 1;
+		var _prevTime; // calc for one hour divide
+		var _startTime; // calc for total journey time
+		var _lastTime; // last update journey time
+		var _distance = 0;
 
 		// initialize kakaomap
 		function init() {
 			resizeMap();
 			initialPath();
+			updateJourneyInfo();
 			setInterval("updatePath()", 10000); // 10 seconds
+			setInterval("updateJourneyInfo()", 10000); // 10 seconds
 		}
 		
-		function initialPath() {			
+		function initialPath() {
+			
+    		var content = '<div class ="label"><span class="left"></span><span class="center">'
+    			+ 'Distance:0, Time: 0'
+				+ '</span><span class="right"></span></div>';
+			_overlay = new kakao.maps.CustomOverlay({
+	    	    map: _map,
+	    	    content: content
+	    	});
+			
 			var xmlHttp = new XMLHttpRequest();
 		   	xmlHttp.onreadystatechange = function() 
 		   	{ 
@@ -87,53 +120,180 @@
 		        {
 		        	var data = JSON.parse(this.responseText);
 		            var i;
-		            for(i = 0; i < data.length; i++) 
-		            	linePath.push(new kakao.maps.LatLng(data[i].lat, data[i].lon));
+		            
+		            if (data.length > 0)
+	            	{
+		            	_prevTime = new Date(data[0].dateTime);
+		            	_startTime = new Date(data[0].dateTime);
+		            	_lastTime = new Date(data[0].dateTime);
+	            	}
+		            else
+	            	{
+	            		_prevTime = new Date();
+	            		_startTime = new Date();
+	            		_lastTime = new Date();
+	            	}
+		            
+		            for(i = 0; i < data.length; i++)
+	            	{
+		            	var pos = new kakao.maps.LatLng(data[i].lat, data[i].lon);
+		            	
+		            	_linePath.push(pos);
+		            	
+		            	_lastTime = new Date(data[i].dateTime);
+		            	var delta = new Date(data[i].dateTime).getTime() - _prevTime.getTime();
+		    			if ((i == 0) || (delta > Math.floor(60 * 60 * 1000))) // 1 hour
+	    				{
+		    				updateOneHourMark(data[i]);
+	    					_prevTime = new Date(data[i].dateTime);		    			
+	    				}
+	            	}
 
-		    		polyline = new kakao.maps.Polyline({
-		    		    path: linePath,
+		            
+		            if (data.length > 0)
+	            	{
+		            	_overlay.setPosition(new kakao.maps.LatLng(
+		            			data[data.length-1].lat, data[data.length-1].lon));	            	
+	            	}
+
+		    		_polyline = new kakao.maps.Polyline({
+		    			map: _map,
+		    		    path: _linePath,
 		    		    strokeWeight: 5,
 		    		    strokeColor: '#FF0000',
 		    		    strokeOpacity: 1.0,
 		    		    strokeStyle: 'solid'
-		    		});
-		    		
-		    		polyline.setMap(map);
+		    		});		    		
 		        }
-		    }		   	
-			xmlHttp.open("GET", "/pathInit?userid=" + userId, true);			
+		    }
+			xmlHttp.open("GET", "/pathInit?userid=" + _userId, true);			
 			xmlHttp.send(null);
 		}
 		
 		
-		function updatePath() {
+		function updatePath() 
+		{
 			var xmlHttp = new XMLHttpRequest();
 		   	xmlHttp.onreadystatechange = function() 
-		   	{ 
+		   	{
 		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
 		        {
 		        	var data = JSON.parse(this.responseText);
 		            var i;
 		            for(i = 0; i < data.length; i++)
-		            	linePath.push(new kakao.maps.LatLng(data[i].lat, data[i].lon));
-		            polyline.setPath(linePath);
+		            	_linePath.push(new kakao.maps.LatLng(data[i].lat, data[i].lon));
+		            _polyline.setPath(_linePath);
+		            
+		            if (data.length > 0)
+	            	{
+			            var back = data[data.length-1];
+		            	
+			            // update marker & timeline if 1 hour over
+			            _lastTime = new Date(back.dateTime);
+		            	var delta = new Date(back.dateTime).getTime() - _prevTime.getTime();
+			            if (delta > (1000 * 60 * 60)) // 1 hour?
+			            {
+			            	updateOneHourMark(back);
+			            	_prevTime = new Date(back.dateTime);
+			            }
+			            
+			            // update overlay info
+			        	var totHours = _lastTime.getTime() - _startTime.getTime();
+						var totDistance = _polyline.getLength();
+
+			    		var content = '<div class ="label"><span class="left"></span><span class="center">'
+			    			+ 'Distance = ' + (totDistance / 1000).toFixed(2) + 'km'
+			    			+ ', Time = ' + (totHours / (1000*60*60)).toFixed(1) + 'h'
+							+ '</span><span class="right"></span></div>';
+						_overlay.setContent(content);
+		            	_overlay.setPosition(new kakao.maps.LatLng(
+		            			back.lat, back.lon));
+	            	}
 
 		            // move camera
 		            var chkbox = document.getElementsByName('traceChk');
 		            if (chkbox[0].checked && (data.length > 0))
 	            	{
-		                map.panTo(
+		                _map.panTo(
 		                		new kakao.maps.LatLng(data[data.length-1].lat, data[data.length-1].lon));
 	            	}
 		        }
 		    }
-			xmlHttp.open("GET", "/pathUpdate?userid=" + userId, true);			
+			xmlHttp.open("GET", "/pathUpdate?userid=" + _userId, true);
 			xmlHttp.send(null);
 		}
 		
+		
+		// update journey distance, time
+		function updateJourneyInfo() 
+		{
+			var xmlHttp = new XMLHttpRequest();
+		   	xmlHttp.onreadystatechange = function() 
+		   	{
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+		        {
+		        	var totDistance = 0;
+		        	var totHours = 0;
+		        	var data = JSON.parse(this.responseText);
+		            for(var i = 0; i < data.length; i++)
+	            	{
+		            	totDistance += data[i].distance;
+		            	totHours += data[i].journeyTime;
+	            	}
+
+					// update distance, time
+		    		var content = '<div class ="label"><span class="left"></span><span class="center">'
+		    			+ 'Distance = ' + (totDistance / 1000).toFixed(2) + 'km'
+		    			+ ', Time = ' + (totHours / (1000*60*60)).toFixed(1) + 'h'
+						+ '</span><span class="right"></span></div>';
+					//_overlay.setContent(content);
+		        }
+		    }
+			xmlHttp.open("GET", "/todayJourneyInfo?user=" + _userId, true);
+			xmlHttp.send(null);
+		}
+		
+		
+		// add one hour marker, timeline
+		function updateOneHourMark( path ) 
+		{
+        	var delta = _lastTime.getTime() - _startTime.getTime();
+			var hours = Math.floor(delta / (60 * 60 * 1000));
+        	var pos = new kakao.maps.LatLng(path.lat, path.lon);
+        	
+			// 1 hour marker
+    		var marker = new kakao.maps.Marker({
+    			map: _map,
+    		    position: pos
+    		});
+    		_markers.push(marker);
+			
+    		// timeline overay
+    		var content = '<div class ="label"><span class="left"></span><span class="center">'
+    			+ hours + 'h. ' + (new Date(path.dateTime)).toTimeString().split(' ')[0]
+				+ '</span><span class="right"></span></div>';
+	    	var customOverlay = new kakao.maps.CustomOverlay({
+	    	    map: _map,
+	    	    position: pos,
+	    	    content: content
+	    	});
+	    	_timeLines.push(customOverlay);
+		}
+		
+		
 		function onClearButton() {
-			linePath = [];
-			polyline.setPath(linePath);
+			_linePath = [];
+			_polyline.setPath(linePath);
+		}
+		
+		function onTimeLineBtn(checked) {
+			for (var timeLine of _timeLines)
+				timeLine.setMap(checked? _map : null);
+		}
+		
+		function onMarkerBtn(checked) {
+			for (var marker of _markers)
+				marker.setMap(checked? _map : null);
 		}
 		
 		// full window map
@@ -142,20 +302,42 @@
 		    var width = window.innerWidth;
 		    var height = window.innerHeight;
 		    mapContainer.style.width = width + "px";
-		    mapContainer.style.height = height - 70 + "px";
-		    map.relayout();
+		    mapContainer.style.height = height - 120 + "px";
+		    _map.relayout();
 		}
 		
 		// window resize event
         function onWindowResize() {
         	resizeMap();
-        }  
-        
+        }
 
 	window.addEventListener( 'resize', onWindowResize, false );
     window.onload = init;
 	
 	</script>
+
+
+	<div class="ui toggle checkbox" style="margin:10px">
+	  <input type="checkbox" name="traceChk" checked="checked">
+	  <label>Trace Center</label>
+	</div>
+
+	<div class="ui toggle checkbox" style="margin:10px">
+	  <input type="checkbox" id="showTimeLine" checked="checked"
+	  	th:onclick="|onTimeLineBtn(checked)|">
+	  <label>TimeLine</label>
+	</div>
+
+	<div class="ui toggle checkbox" style="margin:10px">
+	  <input type="checkbox" id="showMarker" checked="checked"
+	  	th:onclick="|onMarkerBtn(checked)|">
+	  <label>Marker</label>
+	</div>
+
+
+	<button class="ui icon button" style="float:right;" onclick="onClearButton()">
+	  <i class="erase icon"></i>
+	</button>
 
 </body>
 </html>

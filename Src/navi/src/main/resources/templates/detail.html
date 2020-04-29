@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+
+	<link rel="stylesheet" type="text/css" href="semantic/semantic.css">
+	<script
+	  src="assets/library/jquery.min.js"
+	  ></script>
+	<script src="semantic/semantic.js"></script>
+	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=685fb6d52e9558eb55705c0b663c66bd&libraries=services,clusterer,drawing"></script>
+
+<meta charset="UTF-8">
+<title>Journey Information</title>
+
+    <style>
+        .column {
+            border: 1px solid gray;
+            text-align : center;
+        }
+        h1,h2 {
+        	text-align : center;
+        }
+        
+	.label {margin-bottom: 96px;}
+	.label * {display: inline-block;vertical-align: top;}
+	.label .left {background: url("https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_l.png") no-repeat;display: inline-block;height: 24px;overflow: hidden;vertical-align: top;width: 7px;}
+	.label .center {background: url(https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_bg.png) repeat-x;display: inline-block;height: 24px;font-size: 12px;line-height: 24px;}
+	.label .right {background: url("https://t1.daumcdn.net/localimg/localimages/07/2011/map/storeview/tip_r.png") -1px 0  no-repeat;display: inline-block;height: 24px;overflow: hidden;width: 6px;}
+	.overlay {
+	    position:absolute;
+	    left: -50px;
+	    top:0;
+	    width:100px;
+	    height: 100px;
+	    background: #fff;
+	    border:1px solid #ccc;
+	    border-radius: 5px;
+	    padding:5px;
+	    font-size:12px;
+	    text-align: center;
+	    white-space: pre;
+	    word-wrap: break-word;
+	}
+        
+    </style>
+    
+</head>
+
+<body>
+
+<div class="ui large fixed menu">
+  <div class="item">
+    <img src="https://semantic-ui.com/images/logo.png">
+  </div>
+  <a class="item" th:href="@{pathPage}">
+    Journey
+  </a>
+  <a class="item" th:href="@{live}">
+    Live Journey!
+  </a>
+  <a class="active item">
+    Detail
+  </a>
+  <div class="right menu">
+    <div class="item">
+        <div class="ui primary button">Sign Up</div>
+    </div>
+  </div>
+</div>
+
+
+<h3>~ welcome navigation web ~</h3>
+
+<div id="map" style="width:1000px;height:1000px;text-align:center;"></div>
+
+	<script th:inline="javascript">
+		var container = document.getElementById('map');
+		var options = {
+			center: new kakao.maps.LatLng(36.450701, 126.570667),
+			level: 13
+		};
+
+		var map = new kakao.maps.Map(container, options);
+		var markers = [];
+		var timeLines = [];
+		var polyLines = [];
+
+		// initialize kakaomap
+		function init() {
+			resizeMap();
+			initialPath();
+		}
+		
+		function initialPath() {
+			updateMap(true, true);
+		}
+		
+		
+		// update map
+		function updateMap(showMarker, showTimeLine) {
+            var journeys =/*[[${journeys}]]*/null;
+			var i=0;
+			for (i=0; i < journeys.length; ++i)
+			{
+				var journey = journeys[i];
+				if (journey.checked != false)
+				{
+					var xmlHttp = new XMLHttpRequest();
+				   	xmlHttp.onreadystatechange = function() 
+				   	{ 
+				        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+				        {
+				        	// update journey path
+				        	var data = JSON.parse(this.responseText);
+				        	var linePath = [];
+				            var i;
+				            for(i = 0; i < data.length; i++) 
+				            	linePath.push(new kakao.maps.LatLng(data[i].lat, data[i].lon));
+
+				    		var polyline = new kakao.maps.Polyline({
+				    			map: map,
+				    		    path: linePath,
+				    		    strokeWeight: 5,
+				    		    strokeColor: '#FF0000',
+				    		    strokeOpacity: 1.0,
+				    		    strokeStyle: 'solid'
+				    		});
+				    		polyLines.push(polyline);
+				    		
+				    		// update journey timeline
+				    		var hour = 0;
+				    		var prevTime = (data.length > 0)? new Date(data[0].dateTime) : 0;
+				    		for (i=0; i < data.length; ++i)
+				    		{
+				    			var delta = new Date(data[i].dateTime).getTime() - prevTime.getTime();
+				    			if ((i == 0) || (delta > Math.floor(60 * 60 * 1000))) // 1 hour
+			    				{
+					    			var markerPosition = new kakao.maps.LatLng(data[i].lat, data[i].lon);
+					    			
+					    			if (showMarker)
+				    				{
+							    		var marker = new kakao.maps.Marker({
+							    			map: map,
+							    		    position: markerPosition
+							    		});
+							    		markers.push(marker);
+				    				}
+
+						    		if (showTimeLine)
+					    			{
+							    		var content = '<div class ="label"><span class="left"></span><span class="center">'
+							    			+ hour + 'h. ' + data[i].dateTime
+						    				+ '</span><span class="right"></span></div>';
+								    	var customOverlay = new kakao.maps.CustomOverlay({
+								    	    map: map,
+								    	    position: markerPosition,
+								    	    content: content
+								    	});
+								    	timeLines.push(customOverlay);
+					    			}
+				    				
+							    	++hour;
+			    					prevTime = new Date(data[i].dateTime);
+			    				}
+				    		}
+				    		
+				        }
+				    }
+					xmlHttp.open("GET", "/path/" + journey.id + '/' + journey.timeId, true);
+					xmlHttp.send(null);
+				}
+			}//~for			
+		}
+		
+		
+		function onTimeLineBtn(checked) {
+			for (var timeLine of timeLines)
+				timeLine.setMap(checked? map : null);
+		}
+		
+		function onMarkerBtn(checked) {
+			for (var marker of markers)
+				marker.setMap(checked? map : null);
+		}
+		
+		// full window map
+		function resizeMap() {
+		    var mapContainer = document.getElementById('map');
+		    var width = window.innerWidth;
+		    var height = window.innerHeight;
+		    mapContainer.style.width = width + "px";
+		    mapContainer.style.height = height - 120 + "px";
+		    map.relayout();
+		}
+		
+		// window resize event
+        function onWindowResize() {
+        	resizeMap();
+        }
+        
+
+	window.addEventListener( 'resize', onWindowResize, false );
+    window.onload = init;
+	
+	</script>
+
+	
+	<div class="ui toggle checkbox" style="margin:10px">
+	  <input type="checkbox" id="showTimeLine" checked="checked"
+	  	th:onclick="|onTimeLineBtn(checked)|">
+	  <label>TimeLine</label>
+	</div>
+
+	<div class="ui toggle checkbox" style="margin:10px">
+	  <input type="checkbox" id="showMarker" checked="checked"
+	  	th:onclick="|onMarkerBtn(checked)|">
+	  <label>Marker</label>
+	</div>
+
+
+</body>
+</html>

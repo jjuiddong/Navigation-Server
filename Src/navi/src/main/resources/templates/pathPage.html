@@ -38,6 +38,9 @@
   <a class="item" th:href="@{live}">
     Live Journey!
   </a>
+  <a class="item" th:href="@{detail}">
+    Detail
+  </a>
   <div class="right menu">
     <div class="item">
         <div class="ui primary button">Sign Up</div>
@@ -135,31 +138,64 @@
 				.load(window.location.href + '?page=' + page + '&size=' + size + ' #list')
 				.fadeIn("slow");			
 		}
+		
+		
+		// request detail journey information
+		function showDetail(journeyId, journeyTimeId) {
+			var data = {};
+			data.journeyId = journeyId;
+			data.journeyTimeId = journeyTimeId;
+			var json = JSON.stringify(data);
+			var xhr = new XMLHttpRequest();
+		   	xhr.onreadystatechange = function() 
+		   	{ 
+		        if (xhr.readyState == 4 && xhr.status == 200) 
+		        {
+					$('.ui.modal')
+					  .modal('show')
+					;
+		        }
+		    }
+			xhr.open("PUT", 'showDetail', true);
+			xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
+			xhr.send(json);			
+		}
 	
 		
 	</script>
 </div>
 
-<div class="ui vertical segment" style="padding:3px; text-align:left;">
-	<div class="ui animated orange button" tabindex="0" onclick="location.href='live'">
+<div class="ui vertical segment" style="padding:3px;">
+	<div class="ui animated orange button" tabindex="0"	style="text-align:left;" 
+		onclick="location.href='live'">
 	  <div class="visible content">Live Today Journey!</div>
 	  <div class="hidden content">
 	    <i class="right arrow icon"></i>
 	  </div>
 	</div>
+
+	<div class="ui animated olive button" tabindex="0" style="float:right;" 
+		onclick="location.href='detail'">
+	  <div class="visible content">Journey Detail</div>
+	  <div class="hidden content">
+	    <i class="right arrow icon"></i>
+	  </div>
+	</div>
+	
 </div>
+
 
 <div class="ui vertical segment" style="padding:0px;">
 
 	<div id="list" style="width:1000px;">	
-		<table class="ui celled striped table">
+		<table class="ui celled striped table" style="text-align:center">
 		  <thead>
 		    <tr><th>Show</th>
-		    <th>Number</th>
-		    <th>Date</th>
 		    <th>User</th>
+		    <th>Date</th>
 		    <th>Distance</th>
 		    <th>Journey Time</th>
+		    <th>Detail</th>
 		  </tr></thead>
 		  
 		  <tbody th:each="journey : ${journeys}">
@@ -171,13 +207,17 @@
 		          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}', checked)|"></input><label></label>
 		        </div>
 		      </td>
-	      	    
-		      <td data-label="Number" th:text="${journey.id}"></td>
+
+   		      <td data-label="User" th:text="${journey.userId}"></td>
 		      <td data-label="Date" th:text="${journey.date}"></td>
-		      <td data-label="User" th:text="${journey.userId}"></td>
 		      <td data-label="Distance" th:text="|${#numbers.formatDecimal(journey.distance/1000,1,1)} Km|"></td>
 		      <td data-label="Journey Time"
 		       	th:text="|${#numbers.formatDecimal(journey.journeyTime/(1000*60*60),1,1)} Hour|"></td>
+		       	
+		      <td data-label="Detail">
+				  <button class="mini ui brown button" th:onclick="|showDetail(${journey.id})|" >Detail</button>
+			  </td>
+			  		       	
 		    </tr>
 		  </tbody>
 	
@@ -203,15 +243,43 @@
 			</div>	  
 		  </tr></tfoot>
 		  
-	
 		</table>
 	</div>
 
 </div>
+
 <div class="ui vertical segment">
   <p></p>
 </div>
 
-
+	<!-- path detail modal dialog -->	
+	<div class="ui modal" id="modal_detail">
+	  <i class="close icon"></i>
+	  <div class="header">
+	    Journey Information
+	  </div>
+	  
+	  <div class="image content">
+	    <div class="ui medium image">
+	      <img src="assets/images/carjourney.jpg">
+	    </div>
+	    
+	    <div class="description">
+	      <div class="ui header">Your Journey Information!</div>
+	      <p>Funny Journey!!</p>
+	    </div>
+	    
+	  </div>
+	  
+	  <div class="actions">
+	    <div class="ui positive right labeled icon button">
+	      Ok
+	      <i class="checkmark icon"></i>
+	    </div>
+	  </div>	
+  	</div>
+	<!-- end detail modal dialog -->
+	  
+	  
 </body>
 </html>
