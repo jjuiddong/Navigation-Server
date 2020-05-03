@@ -4,6 +4,12 @@
 
 #pragma comment( lib, "libmysql.lib" )
 
+struct sPathFile 
+{
+	uint64 timeId;
+	string fileName;
+};
+
 int InsertPathData();
 int InsertJourneyData();
 bool QueryInsertPathData(MySQLConnection &sqlCon, cPath::sRow &row
@@ -35,29 +41,73 @@ int InsertPathData()
 		return 0;
 	}
 
-	int cnt = 0;
+	set<string> chkInsertData;
+
 	for (auto &fileName : files)
 	{
-		cPath path;
-		if (!path.Read(fileName))
-			continue;
+		if (chkInsertData.end() != chkInsertData.find(fileName))
+			continue; // already insert
 
-		std::cout << "upload " << fileName << "\n";
-		const unsigned __int64 journeyTimeId = path.m_table.empty() ? 0 : path.m_table[0].dateTime;
+		cPath file0;
+		const uint64 dateTime = file0.GetTimeId(fileName);
+		if (dateTime == 0)
+			continue; // error occurred!
 
-		for (uint i=1; i < path.m_table.size(); ++i)
+		cDateTime2 date;
+		// format : yyyy-mm-dd
+		string dateStr1 = date.GetTimeStr4(dateTime).c_str();
+		// format : yyyymmdd
+		string dateStr2 = date.GetTimeStr5(dateTime).c_str();
+
+		// find all same date data
+		vector<sPathFile> pathFiles;
+		for (auto &fn : files)
 		{
+			cPath file;
+			const uint64 timeId = file.GetTimeId(fn);
+			if (dateStr1 == date.GetTimeStr4(timeId).c_str())
 			{
-				cPath::sRow &r0 = path.m_table[i - 1];
-				cPath::sRow &r1 = path.m_table[i];
-				const double d = WGS84Distance(r0.lonLat, r1.lonLat);
-				if (d > 500)
-					continue; // maybe lon/lat data crack
+				cPath file;
+				const uint64 timeId = file.GetTimeId(fn);
+				if (timeId == 0)
+					continue; // error occurred!
+				pathFiles.push_back({ timeId, fn });
 			}
+		}
+		if (pathFiles.empty())
+			continue; // error occurred!
 
-			if (i==1)
-				QueryInsertPathData(sqlCon, path.m_table[0], journeyTimeId);
-			QueryInsertPathData(sqlCon, path.m_table[i], journeyTimeId);
+		// sorting by timeId
+		std::sort(pathFiles.begin(), pathFiles.end(), 
+			[](auto &a1, auto &a2) {return a1.timeId < a2.timeId;});
+
+		const uint64 journeyTimeId = pathFiles[0].timeId;
+
+		// calc all same date data
+		for (auto &pathFile : pathFiles)
+		{
+			chkInsertData.insert(pathFile.fileName);
+
+			cPath path;
+			if (!path.Read(pathFile.fileName))
+				continue;
+
+			std::cout << "upload " << pathFile.fileName << "\n";
+
+			for (uint i=1; i < path.m_table.size(); ++i)
+			{
+				{
+					cPath::sRow &r0 = path.m_table[i - 1];
+					cPath::sRow &r1 = path.m_table[i];
+					const double d = WGS84Distance(r0.lonLat, r1.lonLat);
+					if (d > 500)
+						continue; // maybe lon/lat data crack
+				}
+
+				if (i==1)
+					QueryInsertPathData(sqlCon, path.m_table[0], journeyTimeId);
+				QueryInsertPathData(sqlCon, path.m_table[i], journeyTimeId);
+			}
 		}
 	}
 
@@ -69,6 +119,8 @@ int InsertPathData()
 // upload journey_date table data
 int InsertJourneyData()
 {
+	const int userId = 1;
+
 	list<string> exts;
 	exts.push_back(".txt");
 	list<string> files;
@@ -81,51 +133,88 @@ int InsertJourneyData()
 		return 0;
 	}
 
-	int cnt = 0;
+	set<string> chkInsertData;
+
 	for (auto &fileName : files)
 	{
-		cPath path;
-		if (!path.Read(fileName))
-			continue;
+		if (chkInsertData.end() != chkInsertData.find(fileName))
+			continue; // already insert
+
+		cPath file0;
+		const uint64 dateTime = file0.GetTimeId(fileName);
+		if (dateTime == 0)
+			continue; // error occurred!
+
+		cDateTime2 date;
+		// format : yyyy-mm-dd
+		string dateStr1 = date.GetTimeStr4(dateTime).c_str();
+		// format : yyyymmdd
+		string dateStr2 = date.GetTimeStr5(dateTime).c_str();
+
+		// find all same date data (by time_id)
+		vector<sPathFile> pathFiles;
+		for (auto &fn : files)
+		{
+			cPath file;
+			const uint64 timeId = file.GetTimeId(fn);
+			if (dateStr1 == date.GetTimeStr4(timeId).c_str())
+			{
+				cPath file;
+				const uint64 timeId = file.GetTimeId(fn);
+				if (timeId == 0)
+					continue; // error occurred!
+				pathFiles.push_back({ timeId, fn });
+			}
+		}
+		if (pathFiles.empty())
+			continue; // error occurred!
+
+		// sorting by timeId
+		std::sort(pathFiles.begin(), pathFiles.end(),
+			[](auto &a1, auto &a2) {return a1.timeId < a2.timeId; });
+
+		const uint64 journeyTimeId = pathFiles[0].timeId;
 
 		double totDistance = 0; // total journey distance
-		for (uint i = 1; i < path.m_table.size(); ++i)
+		double journeyTime = 0; // total journey time
+
+		// calc all same date data
+		for (auto &pathFile : pathFiles)
 		{
-			cPath::sRow &r0 = path.m_table[i - 1];
-			cPath::sRow &r1 = path.m_table[i];
-			const double d = WGS84Distance(r0.lonLat, r1.lonLat);
-			if (d > 500)
-				continue; // maybe lon/lat data crack
-			totDistance += d;
+			cPath path;
+			if (!path.Read(pathFile.fileName))
+				continue;
+
+			for (uint i = 1; i < path.m_table.size(); ++i)
+			{
+				cPath::sRow &r0 = path.m_table[i - 1];
+				cPath::sRow &r1 = path.m_table[i];
+				const double d = WGS84Distance(r0.lonLat, r1.lonLat);
+				if (d > 500)
+					continue; // maybe lon/lat data crack
+				totDistance += d;
+			}
+
+			if (!path.m_table.empty())
+			{
+				cPath::sRow &first = path.m_table.front();
+				cPath::sRow &last = path.m_table.back();
+				cDateTime2 dt = cDateTime2(last.dateTime) - cDateTime2(first.dateTime);
+				journeyTime += (double)dt.m_t;
+			}
+
+			chkInsertData.insert(pathFile.fileName);
 		}
 
-		double journeyTime = 0;
-		if (!path.m_table.empty())
-		{
-			cPath::sRow &first = path.m_table.front();
-			cPath::sRow &last = path.m_table.back();
-			cDateTime2 dt = cDateTime2(last.dateTime) - cDateTime2(first.dateTime);
-			journeyTime = (double)dt.m_t;
-		}
+		std::cout << "upload " << dateStr1 << "\n";
 
-		std::cout << "upload " << fileName << "\n";
-		for (auto &row : path.m_table)
-		{
-			const float speed = 0.f;
-			const float altitude = 0.f;
+		string sql =
+			common::format("INSERT INTO journey_date (date, user_id, time_id, distance, journey_time)"
+				" VALUES ('%s', '%d', '%I64u', '%f', '%f');"
+				, dateStr1.c_str(), userId, journeyTimeId, totDistance, journeyTime);
 
-			cDateTime2 dateTime;
-			Str32 strDateTime = dateTime.GetTimeStr3(row.dateTime);
-
-			string sql =
-				common::format("INSERT INTO journey_date (date, user_id, time_id, distance, journey_time)"
-					" VALUES ('%s', '%d', '%I64u', '%f', '%f');"
-					, strDateTime.c_str(), 1, row.dateTime, totDistance, journeyTime);
-
-			MySQLQuery query(&sqlCon, sql);
-			query.ExecuteInsert();
-			break;
-		}
+		MySQLQuery query(&sqlCon, sql);
+		query.ExecuteInsert();
 	}
 
 	std::cout << "finish~\n";

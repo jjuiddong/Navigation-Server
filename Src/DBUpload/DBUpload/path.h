@@ -21,6 +21,7 @@ public:
 	virtual ~cPath();
 
 	bool Read(const StrPath &fileName);
+	uint64 GetTimeId(const StrPath &fileName);
 	bool IsLoad() const;
 	void Clear();
 

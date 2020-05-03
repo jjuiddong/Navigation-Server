@@ -28,7 +28,7 @@ bool Check6Val(const double val)
 
 bool cPath::Read(const StrPath &fileName)
 {
-	cSimpleData simData(fileName.c_str());
+	cSimpleData simData(fileName);
 	if (!simData.IsLoad())
 		return false;
 
@@ -60,6 +60,20 @@ bool cPath::Read(const StrPath &fileName)
 	}
 
 	return true;
+}
+
+
+// get path time id
+// return first path time
+uint64 cPath::GetTimeId(const StrPath &fileName)
+{
+	cSimpleData simData;
+	if (!simData.ReadLine(fileName, ",", 1))
+		return 0;
+	if (simData.m_table[0].empty())
+		return 0; // error occurred!
+	const uint64 timeId = common::GetCurrentDateTime6(simData.m_table[0][0]);
+	return timeId;
 }
 
 
