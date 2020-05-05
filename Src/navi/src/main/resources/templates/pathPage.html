@@ -50,18 +50,42 @@
 
 <h3>~ welcome navi web ~</h3>
 	
-<div class="ui vertical segment" style="padding:0px;">
-<div id="map" style="width:1000px;height:500px;text-align:center;"></div>
+<div id="map" style="width:1000px;height:500px;text-align:center;margin-bottom:5px;"></div>
 	<script th:inline="javascript">
 		var container = document.getElementById('map');
 		var options = {
 			center: new kakao.maps.LatLng(36.625109, 128.033937),
-					//36.450701, 126.570667),
 			level: 13
 		};
 
-		var map = new kakao.maps.Map(container, options);
-		var polylines = new Map();
+		var _map = new kakao.maps.Map(container, options);
+		var _polylines = new Map();
+		var _markers = [];
+		var _landMarkId; // edit landmark id
+
+		function init() 
+		{			
+			// update landmark marker
+			var xmlHttp = new XMLHttpRequest();
+			xmlHttp.onreadystatechange = function() {
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+		        {
+		        	var data = JSON.parse(this.responseText);
+		            for(i = 0; i < data.length; i++)
+	            	{
+		            	var markerPosition = new kakao.maps.LatLng(data[i].lat, data[i].lon);
+			    		var marker = new kakao.maps.Marker({
+			    			map: _map,
+			    		    position: markerPosition
+			    		});
+			    		marker.setMap(null);
+			    		_markers.push(marker);
+	            	}
+		        }				
+			}			
+			xmlHttp.open("GET", "/landMarkList?userId=1", true);
+			xmlHttp.send(null);			
+		}		
 		
 
 		// journey checkbox clicked
@@ -69,9 +93,9 @@
 			
 			if (checked)
 			{
-				if (polylines.has(journeyTimeId) == true)
+				if (_polylines.has(journeyTimeId) == true)
 				{
-					polylines.get(journeyTimeId).setMap(map);
+					_polylines.get(journeyTimeId).setMap(_map);
 				}
 				else
 				{
@@ -94,14 +118,14 @@
 				    		    strokeStyle: 'solid'
 				    		});
 				    		
-				    		polyline.setMap(map);
-				    		polylines.set(journeyTimeId, polyline);				    		
+				    		polyline.setMap(_map);
+				    		_polylines.set(journeyTimeId, polyline);				    		
 				    		//var distance = Math.round(polyline.getLength());
 				    		//alert(distance);
 				    		
 				    		// move to first position
 				    		if (data.length > 0)
-			                	map.panTo(new kakao.maps.LatLng(data[0].lat, data[0].lon));				    		
+			                	_map.panTo(new kakao.maps.LatLng(data[0].lat, data[0].lon));				    		
 				        }
 				    }
 					xmlHttp.open("GET", "/path/" + journeyId + '/' + journeyTimeId, true);
@@ -110,10 +134,10 @@
 			}
 			else
 			{
-				if (polylines.has(journeyTimeId) == true)
+				if (_polylines.has(journeyTimeId) == true)
 				{
-					polylines.get(journeyTimeId).setMap(null);
-					polylines.delete(journeyTimeId);				
+					_polylines.get(journeyTimeId).setMap(null);
+					_polylines.delete(journeyTimeId);				
 				}
 			}
 			
@@ -129,14 +153,27 @@
 				xhr.open("PUT", 'pathShow', true);
 				xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
 				xhr.send(json);
-			}				
+			}
 		}
 		
 		
+		// journey list refresh
 		function pageRefresh(page, size) {
 			$('#list')
-				.load(window.location.href + '?page=' + page + '&size=' + size + ' #list')
-				.fadeIn("slow");			
+				.load(window.location.href + '?page=' + page + '&size=' + size + ' #list'
+						, function() {$('.menu .item').tab();})
+				.fadeIn("slow")
+				;
+		}
+
+
+		// landmark list refresh
+		function pageRefresh2(page, size) {
+			$('#list')
+				.load(window.location.href + '?page2=' + page + '&size=' + size + ' #list'
+						, function() {$('.menu .item').tab('change tab', 'second');})
+				.fadeIn("slow")
+				;
 		}
 		
 		
@@ -145,13 +182,13 @@
 			var data = {};
 			data.journeyId = journeyId;
 			data.journeyTimeId = journeyTimeId;
-			var json = JSON.stringify(data);
+			var json = JSON.stringify(data); 
 			var xhr = new XMLHttpRequest();
 		   	xhr.onreadystatechange = function() 
 		   	{ 
 		        if (xhr.readyState == 4 && xhr.status == 200) 
 		        {
-					$('.ui.modal')
+					$('#modal_detail')
 					  .modal('show')
 					;
 		        }
@@ -160,19 +197,70 @@
 			xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
 			xhr.send(json);			
 		}
-	
 		
-	</script>
-</div>
+		function journeyTab() {
+			for (var i=0; i < _markers.length; ++i)
+				_markers[i].setMap(null);
+		}
+		
+		function landMarkTab() {
+			for (var i=0; i < _markers.length; ++i)
+				_markers[i].setMap(_map);
+		}
 
-<div class="ui vertical segment" style="padding:3px;">
-	<div class="ui animated orange button" tabindex="0"	style="text-align:left;" 
-		onclick="location.href='live'">
-	  <div class="visible content">Live Today Journey!</div>
-	  <div class="hidden content">
-	    <i class="right arrow icon"></i>
-	  </div>
-	</div>
+		function focusLandMark(lat, lon) {
+			_map.panTo(new kakao.maps.LatLng(lat, lon));
+		}
+		
+		
+		// show landmark comment edit modal dialog
+		function showEditComment(landMarkId) {
+			
+			_landMarkId = landMarkId;
+			
+			var xmlHttp = new XMLHttpRequest();
+			xmlHttp.onreadystatechange = function() 
+		   	{ 
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) 
+		        {
+		        	var data = JSON.parse(this.responseText);
+		        	
+					$('#modal_landmark')
+					  .modal('show')
+					;
+					
+					$('#landmark_comment').html(data.comment);
+					
+		        }
+		    }
+			xmlHttp.open("GET", 'landMarkInfo?user=1&id=' + landMarkId, true);
+			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
+			xmlHttp.send(null);		
+			
+		}
+		
+		function updateLandMarInfo() {
+			
+			// uplad landmark comment
+			var xmlHttp = new XMLHttpRequest();
+			xmlHttp.onreadystatechange = function() {
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		        	//alert('success');
+		        }
+			};
+			
+			var json = JSON.stringify({
+				id : _landMarkId,
+            	comment : $('#landmark_comment').val()
+            });
+			xmlHttp.open("PUT", "landMarkCommentUpload", true);
+			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
+			xmlHttp.send(json);
+		}		
+		
+		window.onload = init;
+	</script>
+
 
 	<div class="ui animated olive button" tabindex="0" style="float:right;" 
 		onclick="location.href='detail'">
@@ -180,77 +268,157 @@
 	  <div class="hidden content">
 	    <i class="right arrow icon"></i>
 	  </div>
-	</div>
-	
-</div>
+	</div>	
 
-
-<div class="ui vertical segment" style="padding:0px;">
-
-	<div id="list" style="width:1000px;">	
-		<table class="ui celled striped table" style="text-align:center">
-		  <thead>
-		    <tr><th>Show</th>
-		    <th>User</th>
-		    <th>Date</th>
-		    <th>Distance</th>
-		    <th>Journey Time</th>
-		    <th>Detail</th>
-		  </tr></thead>
-		  
-		  <tbody th:each="journey : ${journeys}">
-		    <tr class="center aligned">
-		      <td class="collapsing">
-		        <div class="ui fitted slider checkbox">
-		          <input type="checkbox" name="showChk"
-		          	th:checked="${journey.checked}"
-		          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}', checked)|"></input><label></label>
-		        </div>
-		      </td>
-
-   		      <td data-label="User" th:text="${journey.userId}"></td>
-		      <td data-label="Date" th:text="${journey.date}"></td>
-		      <td data-label="Distance" th:text="|${#numbers.formatDecimal(journey.distance/1000,1,1)} Km|"></td>
-		      <td data-label="Journey Time"
-		       	th:text="|${#numbers.formatDecimal(journey.journeyTime/(1000*60*60),1,1)} Hour|"></td>
-		       	
-		      <td data-label="Detail">
-				  <button class="mini ui brown button" th:onclick="|showDetail(${journey.id})|" >Detail</button>
-			  </td>
-			  		       	
-		    </tr>
-		  </tbody>
-	
-		  <tfoot>
-		    <tr><th colspan="6">
-			<div class="ui right floated pagination menu"		
-				th:with="step = 5, left=${pageNumbers[0] - step}, right=${pageNumbers[0] + step}">
-				
-			 	<a class="icon item" th:onclick="|pageRefresh(${left}, ${page.size})|">
-		          <i class="left chevron icon"></i>
-		        </a>
-		        
-		        <th:block th:each="pageNumber : ${pageNumbers}">
-				    <a 	th:class="${pageNumber==page.number + 1} ? 'item active' : 'item'"
-				    	th:onclick="|pageRefresh(${pageNumber}, ${page.size})|"
-				        th:text=${pageNumber}>
-			        </a>
-		        </th:block>
-		        
-		        <a class="icon item" th:onclick="|pageRefresh(${right}, ${page.size})|">
-		          <i class="right chevron icon"></i>
-		        </a>
-			</div>	  
-		  </tr></tfoot>
-		  
-		</table>
+	<div class="ui animated orange button" tabindex="0"	style="float:right;" 
+		onclick="location.href='live'">
+	  <div class="visible content">Live Today Journey!</div>
+	  <div class="hidden content">
+	    <i class="right arrow icon"></i>
+	  </div>
 	</div>
 
-</div>
 
-<div class="ui vertical segment">
-  <p></p>
-</div>
+	<div id="list">
+	
+		<div id="tabmenu" class="ui top attached tabular menu" style="margin-top:5px" >		
+		  <a class="item active" data-tab="first" th:onclick="|journeyTab()|">Journey List</a>
+		  <a class="item" data-tab="second" th:onclick="|landMarkTab()|">LandMark</a>
+		</div>
+		
+		<div class="ui bottom attached tab segment active" data-tab="first">
+	
+			<div style="width:1000px;">	
+				<table class="ui celled striped table" style="text-align:center">
+				  <thead>
+				    <tr><th>Show</th>
+				    <th>User</th>
+				    <th>Date</th>
+				    <th>Distance</th>
+				    <th>Journey Time</th>
+				    <th>Detail</th>
+				  </tr></thead>
+				  
+				  <tbody th:each="journey : ${journeys}">
+				    <tr class="center aligned">
+				      <td class="collapsing">
+				        <div class="ui fitted slider checkbox">
+				          <input type="checkbox" name="showChk"
+				          	th:checked="${journey.checked}"
+				          	th:onclick="|javascript:checkClick('${journey.id}','${journey.timeId}', checked)|"></input><label></label>
+				        </div>
+				      </td>
+		
+		   		      <td data-label="User" th:text="${journey.userId}"></td>
+				      <td data-label="Date" th:text="${journey.date}"></td>
+				      <td data-label="Distance" th:text="|${#numbers.formatDecimal(journey.distance/1000,1,1)} Km|"></td>
+				      <td data-label="Journey Time"
+				       	th:text="|${#numbers.formatDecimal(journey.journeyTime/(1000*60*60),1,1)} Hour|"></td>
+				       	
+				      <td data-label="Detail">
+						  <button class="mini ui brown button" th:onclick="|showDetail(${journey.id})|" >Detail</button>
+					  </td>
+					  		       	
+				    </tr>
+				  </tbody>
+			
+				  <tfoot>
+				    <tr><th colspan="6">
+					<div class="ui right floated pagination menu"		
+						th:with="step = 5, left=${pageNumbers[0] - step}, right=${pageNumbers[0] + step}">
+						
+					 	<a class="icon item" th:onclick="|pageRefresh(${left}, ${page.size})|">
+				          <i class="left chevron icon"></i>
+				        </a>
+				        
+				        <th:block th:each="pageNumber : ${pageNumbers}">
+						    <a 	th:class="${pageNumber==page.number + 1} ? 'item active' : 'item'"
+						    	th:onclick="|pageRefresh(${pageNumber}, ${page.size})|"
+						        th:text=${pageNumber}>
+					        </a>
+				        </th:block>
+				        
+				        <a class="icon item" th:onclick="|pageRefresh(${right}, ${page.size})|">
+				          <i class="right chevron icon"></i>
+				        </a>
+					</div>	  
+				  </tr></tfoot>
+				  
+				</table>
+			</div>
+	
+		</div>
+		
+		<div id="landmark_list" class="ui bottom attached tab segment" data-tab="second">
+		
+		  		<div style="width:1000px;">	
+					<table class="ui celled striped table" style="text-align:center">
+					  <thead>
+					    <tr><th>Show</th>
+					    <th>User</th>
+					    <th>Date</th>
+					    <th>Address</th>
+					    <th>Comment</th>
+					    <th>Focus</th>
+					    <th>Comment Edit</th>					    
+					  </tr></thead>
+					  
+					  <tbody th:each="landMark : ${landMarks}">
+					    <tr class="center aligned">
+					      <td class="collapsing">
+					        <div class="ui fitted slider checkbox">
+					          <input type="checkbox" name="showChk" checked></input><label></label>
+					        </div>
+					      </td>
+			
+			   		      <td data-label="User" th:text="${landMark.userId}"></td>
+					      <td data-label="Date" th:text="${landMark.dateTime}"></td>
+					      <td data-label="Address" th:text="${landMark.address}"></td>
+					      <td data-label="Comment" th:text="${landMark.comment}"></td>
+					      <td data-label="Focus">
+							  <button class="mini ui blue button" th:onclick="|focusLandMark(${landMark.lat}, ${landMark.lon})|" >Focus</button>
+						  </td>
+					      <td data-label="Comment" >
+						      <button class="mini ui green button" th:onclick="|showEditComment(${landMark.id})|" >Edit</button>
+					      </td>
+
+					    </tr>
+					  </tbody>				  
+
+					  <tfoot>
+					    <tr><th colspan="7">
+						<div class="ui right floated pagination menu"		
+							th:with="step = 5, left=${pageNumbers2[0] - step}, right=${pageNumbers2[0] + step}">
+							
+						 	<a class="icon item" th:onclick="|pageRefresh2(${left}, ${page2.size})|">
+					          <i class="left chevron icon"></i>
+					        </a>
+					        
+					        <th:block th:each="pageNumber : ${pageNumbers2}">
+							    <a 	th:class="${pageNumber==page2.number + 1} ? 'item active' : 'item'"
+							    	th:onclick="|pageRefresh2(${pageNumber}, ${page2.size})|"
+							        th:text=${pageNumber}>
+						        </a>
+					        </th:block>
+					        
+					        <a class="icon item" th:onclick="|pageRefresh2(${right}, ${page2.size})|">
+					          <i class="right chevron icon"></i>
+					        </a>
+						</div>	  
+					  </tr></tfoot>
+				  					  
+					</table>
+				</div>
+
+		</div>
+		
+		<script th:inline="javascript">
+			$('.menu .item').tab();
+		</script>
+		
+	</div>
+
+
 
 	<!-- path detail modal dialog -->	
 	<div class="ui modal" id="modal_detail">
@@ -266,7 +434,7 @@
 	    
 	    <div class="description">
 	      <div class="ui header">Your Journey Information!</div>
-	      <p>Funny Journey!!</p>
+	      <p>Enjoy Journey!!</p>
 	    </div>
 	    
 	  </div>
@@ -279,6 +447,43 @@
 	  </div>	
   	</div>
 	<!-- end detail modal dialog -->
+	  
+	  
+
+	<!-- landmark comment edit modal dialog -->	
+	<div class="ui modal" id="modal_landmark">
+	  <i class="close icon"></i>
+	  <div class="header">
+	    LandMark Information
+	  </div>
+	  
+	  <div class="image content">
+	    <div class="ui medium image">
+	      <img src="assets/images/carjourney.jpg">
+	    </div>
+	    
+	    <div class="description">
+	      <div class="ui header">Comment</div>
+			<form class="ui form" >
+			  <textarea placeholder="Write Comment" style="min-height:100px; min-width:480px" rows="3"
+			  id="landmark_comment"></textarea>
+			</form>
+	    </div>
+	    
+	  </div>
+	  
+	  <div class="actions">
+	    <div class="ui black deny button">
+	      Nope
+	    </div>
+	    <div class="ui positive right labeled icon button" th:onclick="|updateLandMarInfo()|">
+	      Ok
+	      <i class="checkmark icon"></i>
+	    </div>
+	  </div>
+  	</div>
+	<!-- end edit landmark modal dialog -->	  
+  
 	  
 	  
 </body>

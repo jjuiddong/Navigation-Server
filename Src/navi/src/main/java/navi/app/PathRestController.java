@@ -16,9 +16,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import navi.model.JourneyDate;
+import navi.model.LandMark;
 //import navi.model.JourneyDate;
 import navi.model.Path;
 import navi.service.JourneyDateService;
+import navi.service.LandMarkService;
 import navi.service.PathService;
 
 
@@ -30,6 +32,9 @@ public class PathRestController {
 	
 	@Autowired
 	PathService pathService;
+	
+	@Autowired
+	LandMarkService landMarkService;
 	
 	private LocalDateTime userRefreshTime;
 	
@@ -82,6 +87,16 @@ public class PathRestController {
 //		date1 = date1.plusMinutes(1);
 //		List<Path> list = pathService.pathRepo.findByDateTimeBetween(userRefreshTime, date1);
 //		userRefreshTime = userRefreshTime.plusMinutes(1);
+		return list; 
+	}
+	
+	
+	// ex) landMarkList?userId=1
+	@RequestMapping(value = "landMarkList", method = RequestMethod.GET)
+	public @ResponseBody List<LandMark> landMarkList(
+			@RequestParam("userId") Optional<Long> userId) 
+	{
+		List<LandMark> list = landMarkService.findByUserId((userId.get() == null)? 1 : userId.get());		
 		return list; 
 	}
 	

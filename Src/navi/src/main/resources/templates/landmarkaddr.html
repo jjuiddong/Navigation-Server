@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html
+    xmlns:th="http://www.thymeleaf.org"
+    xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+	<link rel="stylesheet" type="text/css" href="semantic/semantic.css">
+	<script
+	  src="assets/library/jquery.min.js"
+	  ></script>
+	<script src="semantic/semantic.js"></script>
+	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=685fb6d52e9558eb55705c0b663c66bd&libraries=services,clusterer,drawing"></script>
+
+<meta charset="UTF-8">
+<title>Navigation Web</title>
+</head>
+
+<body>
+
+<h3>~ landmark address upload ~</h3>
+	
+<div id="map" style="width:1000px;height:500px;text-align:center;margin-bottom:5px;"></div>
+	<script th:inline="javascript">
+		var container = document.getElementById('map');
+		var options = {
+			center: new kakao.maps.LatLng(36.625109, 128.033937),
+			level: 13
+		};
+
+		var map = new kakao.maps.Map(container, options);
+		var polylines = new Map();		
+
+		function init() {
+			
+			var geocoder = new kakao.maps.services.Geocoder();
+			
+			var landMarks =/*[[${landMarks}]]*/null;
+			for (var i=0; i < landMarks.length; ++i)
+			{
+				//if (landMarks[i].address != null)
+				//	continue;
+
+				var lonLat = new kakao.maps.LatLng(landMarks[i].lat, landMarks[i].lon);
+				
+				var prom = new Promise( function(resolve, reject) {
+					var landMark = landMarks[i];
+				    geocoder.coord2RegionCode(lonLat.getLng(), lonLat.getLat()
+				    		, function(result, status) {
+				    	resolve({result:result,status:status,landMark:landMark});
+				    });
+				});
+				
+				prom.then( function(r) {
+					var landMark = r.landMark;
+					var result = r.result;					
+		            for(var i = 0; i < result.length; i++) 
+		            {
+		                if (result[i].region_type === 'H') 
+		                {
+		        			// uplad landmark address
+		        			var xmlHttp = new XMLHttpRequest();
+		        			xmlHttp.onreadystatechange = function() {
+		        		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		        		        	//alert('success');
+		        		        }
+		        			};
+		        			
+		        			var json = JSON.stringify({
+		        				id : landMark.id,
+		                    	addr : result[i].address_name
+		                    });
+		        			xmlHttp.open("PUT", "landMarkAddrUpload", true);
+		        			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
+		        			xmlHttp.send(json);
+		        			break;
+		                }
+		            }
+				});
+			}
+		}
+	
+		window.onload = init;
+	</script>
+
+	  
+</body>
+</html>

@@ -12,16 +12,64 @@ struct sPathFile
 
 int InsertPathData();
 int InsertJourneyData();
+int InsertLandMark();
 bool QueryInsertPathData(MySQLConnection &sqlCon, cPath::sRow &row
 	, const unsigned __int64 journeyTimeId);
 double WGS84Distance(const Vector2d &lonLat0, const Vector2d &lonLat1);
+const int userId = 1;
 
 
 int main()
 {
     std::cout << "navi DB Upload!\n"; 
-	InsertPathData();
+	//InsertPathData();
 	//InsertJourneyData();
+	InsertLandMark();
+	return 0;
+}
+
+
+int InsertLandMark()
+{
+	MySQLConnection sqlCon;
+	if (!sqlCon.Connect("localhost", 3306, "navi", "1111", "navi"))
+	{
+		std::cout << "DB Connection Error\n";
+		return 0;
+	}
+
+	cSimpleData file("../landmark.txt");
+	if (!file.IsLoad())
+	{
+		std::cout << "not found landmark.txt file\n";
+		return 0;
+	}
+
+	std::cout << "Start Upload LandMark\n";
+
+	cDateTime2 date;
+	date.UpdateCurrentTime();
+	const string dateStr = cDateTime2::GetTimeStr3(date.GetTimeInt64()).c_str();
+
+	for (auto &row : file.m_table)
+	{
+		if (row.size() < 3)
+			continue; // error
+
+		Vector2d lonLat;
+		lonLat.x = atof(row[1].c_str());
+		lonLat.y = atof(row[2].c_str());
+
+		const string sql =
+			common::format("INSERT INTO landmark (user_id, date_time, lon, lat)"
+				" VALUES ('%d', '%s', '%f', '%f');"
+				, userId, dateStr.c_str(), lonLat.x, lonLat.y);
+
+		MySQLQuery query(&sqlCon, sql);
+		query.ExecuteInsert();
+	}
+
+	std::cout << "Finish Upload LandMark\n";
 
 	return 0;
 }
@@ -53,19 +101,18 @@ int InsertPathData()
 		if (dateTime == 0)
 			continue; // error occurred!
 
-		cDateTime2 date;
 		// format : yyyy-mm-dd
-		string dateStr1 = date.GetTimeStr4(dateTime).c_str();
+		const string dateStr1 = cDateTime2::GetTimeStr4(dateTime).c_str();
 		// format : yyyymmdd
-		string dateStr2 = date.GetTimeStr5(dateTime).c_str();
+		const string dateStr2 = cDateTime2::GetTimeStr5(dateTime).c_str();
 
-		// find all same date data
+		// find all same date data (by time_id)
 		vector<sPathFile> pathFiles;
 		for (auto &fn : files)
 		{
 			cPath file;
 			const uint64 timeId = file.GetTimeId(fn);
-			if (dateStr1 == date.GetTimeStr4(timeId).c_str())
+			if (dateStr1 == cDateTime2::GetTimeStr4(timeId).c_str())
 			{
 				cPath file;
 				const uint64 timeId = file.GetTimeId(fn);
@@ -119,8 +166,6 @@ int InsertPathData()
 // upload journey_date table data
 int InsertJourneyData()
 {
-	const int userId = 1;
-
 	list<string> exts;
 	exts.push_back(".txt");
 	list<string> files;
@@ -145,11 +190,10 @@ int InsertJourneyData()
 		if (dateTime == 0)
 			continue; // error occurred!
 
-		cDateTime2 date;
 		// format : yyyy-mm-dd
-		string dateStr1 = date.GetTimeStr4(dateTime).c_str();
+		const string dateStr1 = cDateTime2::GetTimeStr4(dateTime).c_str();
 		// format : yyyymmdd
-		string dateStr2 = date.GetTimeStr5(dateTime).c_str();
+		const string dateStr2 = cDateTime2::GetTimeStr5(dateTime).c_str();
 
 		// find all same date data (by time_id)
 		vector<sPathFile> pathFiles;
@@ -157,7 +201,7 @@ int InsertJourneyData()
 		{
 			cPath file;
 			const uint64 timeId = file.GetTimeId(fn);
-			if (dateStr1 == date.GetTimeStr4(timeId).c_str())
+			if (dateStr1 == cDateTime2::GetTimeStr4(timeId).c_str())
 			{
 				cPath file;
 				const uint64 timeId = file.GetTimeId(fn);
@@ -208,7 +252,7 @@ int InsertJourneyData()
 
 		std::cout << "upload " << dateStr1 << "\n";
 
-		string sql =
+		const string sql =
 			common::format("INSERT INTO journey_date (date, user_id, time_id, distance, journey_time)"
 				" VALUES ('%s', '%d', '%I64u', '%f', '%f');"
 				, dateStr1.c_str(), userId, journeyTimeId, totDistance, journeyTime);
@@ -232,11 +276,11 @@ bool QueryInsertPathData(MySQLConnection &sqlCon, cPath::sRow &row
 	cDateTime2 dateTime;
 	Str32 strDateTime = dateTime.GetTimeStr3(row.dateTime);
 
-	string sql =
+	const string sql =
 		common::format("INSERT INTO path (date_time, user_id, journey_time_id, lon, lat, speed, altitude)"
 			" VALUES ('%s', '%d', '%I64u', '%f', '%f', '%f', '%f');"
 			, strDateTime.c_str()
-			, 1, journeyTimeId, row.lonLat.x, row.lonLat.y, speed, altitude);
+			, userId, journeyTimeId, row.lonLat.x, row.lonLat.y, speed, altitude);
 
 	MySQLQuery query(&sqlCon, sql);
 	query.ExecuteInsert();

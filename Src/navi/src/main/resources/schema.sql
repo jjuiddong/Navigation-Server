@@ -27,6 +27,18 @@ CREATE TABLE IF NOT EXISTS journey_date (
 	PRIMARY KEY (id)
 );
 
+
+CREATE TABLE IF NOT EXISTS landmark (
+	id SERIAL NOT NULL,
+	date_time DATETIME NOT NULL,
+	user_id int8 NOT NULL,
+	lon float8 NOT NULL,
+	lat float8 NOT NULL,
+	address VARCHAR(128),
+	PRIMARY KEY (id)
+);
+
+
 --CREATE TABLE IF NOT EXISTS reservable_room (
 --	reserved_date DATE NOT NULL,
 --	room_id INT4 NOT NULL,

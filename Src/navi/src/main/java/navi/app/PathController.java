@@ -26,8 +26,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import navi.Packet.ReqCheckData;
 import navi.Packet.ReqDetailJourneyInfo;
+import navi.Packet.ReqLandMarkAddr;
+import navi.Packet.ReqLandMarkCommentUpdate;
 import navi.model.JourneyDate;
+import navi.model.LandMark;
 import navi.service.JourneyDateService;
+import navi.service.LandMarkService;
 
 
 @Controller
@@ -35,6 +39,9 @@ public class PathController {
 	
 	@Autowired
 	JourneyDateService journeyDateService;
+	
+	@Autowired
+	LandMarkService landMarkService;
 	
 	final int showListCount = 10;
 	final int showPageCount = 5;
@@ -69,34 +76,62 @@ public class PathController {
 	}
 	
 	
-	// path-page page /pathPage?page=1&size=10
+	// path-page page /pathPage?page=1&size=10&page2=1
 	@RequestMapping("pathPage")
 	String pathPage(
 			@RequestParam("page") Optional<Integer> page, 
 			@RequestParam("size") Optional<Integer> size,
+			@RequestParam("page2") Optional<Integer> page2, 
 			Model model) 
 	{
-		int totalPages = (int)(journeyDateService.getCount() / showListCount) + 1;
-		int currentPage = page.orElse(1);
-        currentPage = (currentPage < 1)? 1 
-        		: (currentPage > totalPages)? totalPages : currentPage;
-        int pageSize = size.orElse(10);
+		// journey_date
+		{
+			int totalPages = (int)(journeyDateService.getCount() / showListCount) + 1;
+			int currentPage = page.orElse(1);
+	        currentPage = (currentPage < 1)? 1 
+	        		: (currentPage > totalPages)? totalPages : currentPage;
+	        int pageSize = size.orElse(10);
 
-		Page<JourneyDate> journeys = journeyDateService.getJourneyDateList(
-				PageRequest.of(currentPage - 1, pageSize));
-		model.addAttribute("page", journeys);
-		model.addAttribute("journeys", journeys.getContent());
-		model.addAttribute("detail", new JourneyDate()); // temporal data
+			Page<JourneyDate> journeys = journeyDateService.getJourneyDateList(
+					PageRequest.of(currentPage - 1, pageSize));
+			model.addAttribute("page", journeys);
+			model.addAttribute("journeys", journeys.getContent());
+			model.addAttribute("detail", new JourneyDate()); // temporal data
 
-        int curTotalPages = journeys.getTotalPages();
-        if (curTotalPages > 0) {
-        	int startPage = ((currentPage-1) / showPageCount * showPageCount) + 1;
-        	int endPage = (startPage + (showPageCount-1) > curTotalPages)? curTotalPages : startPage + (showPageCount-1);
-            List<Integer> pageNumbers = IntStream.rangeClosed(startPage, endPage)
-                .boxed()
-                .collect(Collectors.toList());
-            model.addAttribute("pageNumbers", pageNumbers);
-        }
+	        int curTotalPages = journeys.getTotalPages();
+	        if (curTotalPages > 0) {
+	        	int startPage = ((currentPage-1) / showPageCount * showPageCount) + 1;
+	        	int endPage = (startPage + (showPageCount-1) > curTotalPages)? curTotalPages : startPage + (showPageCount-1);
+	            List<Integer> pageNumbers = IntStream.rangeClosed(startPage, endPage)
+	                .boxed()
+	                .collect(Collectors.toList());
+	            model.addAttribute("pageNumbers", pageNumbers);
+	        }
+		}
+		
+		// landmark
+		{
+			int totalPages = (int)(landMarkService.getCount() / showListCount) + 1;
+			int currentPage = page2.orElse(1);
+	        currentPage = (currentPage < 1)? 1 
+	        		: (currentPage > totalPages)? totalPages : currentPage;
+	        int pageSize = size.orElse(10);
+
+			Page<LandMark> landMarks = landMarkService.findPage(
+					PageRequest.of(currentPage - 1, pageSize));
+			model.addAttribute("page2", landMarks);
+			model.addAttribute("landMarks", landMarks.getContent());
+			
+	        int curTotalPages = landMarks.getTotalPages();
+	        if (curTotalPages > 0) {
+	        	int startPage = ((currentPage-1) / showPageCount * showPageCount) + 1;
+	        	int endPage = (startPage + (showPageCount-1) > curTotalPages)? curTotalPages : startPage + (showPageCount-1);
+	            List<Integer> pageNumbers = IntStream.rangeClosed(startPage, endPage)
+	                .boxed()
+	                .collect(Collectors.toList());
+	            model.addAttribute("pageNumbers2", pageNumbers);
+	        }
+		}
 		
 		return "pathPage";
 	}
@@ -169,6 +204,59 @@ public class PathController {
 		LocalDate date1 = date0.plusDays(1);
 		List<JourneyDate> list = journeyDateService.findByDate(date0, date1);
 		return list;
+	}
+	
+	
+	// landmark address upload
+	@RequestMapping("landMarkAddr")
+	String landMarkAddrUpload(Model model) 
+	{
+		List<LandMark> landMarks = landMarkService.findAll();
+		model.addAttribute("landMarks", landMarks);
+		return "landmarkaddr";
+	}
+	
+	
+	// landmark address upload request
+	@RequestMapping(value = "landMarkAddrUpload", method = RequestMethod.PUT)
+	@ResponseBody String landMarkAddrUpload(@RequestBody ReqLandMarkAddr data) 
+	{
+		Optional<LandMark> landMark = landMarkService.findById(data.id);
+		if (landMark.get() != null)
+		{
+			if (data.addr != null)
+			{
+				landMark.get().address = data.addr;
+				landMarkService.save(landMark.get());
+			}
+		}
+		return "ok";
+	}
+	
+	
+	// request landmark data
+	// url : landMarkInfo?user=1&id=1
+	@RequestMapping(value = "landMarkInfo", method = RequestMethod.GET)
+	@ResponseBody LandMark landMarkInfo(@RequestParam("user") Optional<Integer> userId,
+			@RequestParam("id") Optional<Long> landMarkId) 
+	{
+		Optional<LandMark> landMark = landMarkService.findById(landMarkId.get());
+		return landMark.get();
+	}
+	
+	
+	// request landmark comment update
+	// url : landMarkCommentUpload
+	@RequestMapping(value = "landMarkCommentUpload", method = RequestMethod.PUT)
+	@ResponseBody String landMarkCommentUpload(@RequestBody ReqLandMarkCommentUpdate data) 
+	{
+		Optional<LandMark> landMark = landMarkService.findById(data.id);
+		if (landMark.get() != null)
+		{
+			landMark.get().comment = data.comment;
+			landMarkService.save(landMark.get());
+		}
+		return "Ok";
 	}	
 	
 	
