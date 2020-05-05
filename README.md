@@ -5,6 +5,8 @@ Car Navigation Web Server with Java Spring Framework
   - MySQL
   - KakaoMap
 
-![](https://github.com/jjuiddong/Navigation-Server/blob/master/Doc/live.jpg?raw=true)
-![](https://github.com/jjuiddong/Navigation-Server/blob/master/Doc/detail.jpg?raw=true)
-![](https://github.com/jjuiddong/Navigation-Server/blob/master/Doc/journey.jpg?raw=true)
+![](https://github.com/jjuiddong/Navigation-Server/blob/master/Doc/journey2.jpg?raw=true)
+![](https://github.com/jjuiddong/Navigation-Server/blob/master/Doc/landmark2.jpg?raw=true)
+![](https://github.com/jjuiddong/Navigation-Server/blob/master/Doc/live2.jpg?raw=true)
+![](https://github.com/jjuiddong/Navigation-Server/blob/master/Doc/detail2.jpg?raw=true)
+
