@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS landmark (
 	lon float8 NOT NULL,
 	lat float8 NOT NULL,
 	address VARCHAR(128),
+	comment VARCHAR(256),
 	PRIMARY KEY (id)
 );
 

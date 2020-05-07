@@ -5,8 +5,6 @@
 
 package navi.app;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -17,7 +15,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -25,9 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import navi.Packet.ReqCheckData;
-import navi.Packet.ReqDetailJourneyInfo;
-import navi.Packet.ReqLandMarkAddr;
-import navi.Packet.ReqLandMarkCommentUpdate;
 import navi.model.JourneyDate;
 import navi.model.LandMark;
 import navi.service.JourneyDateService;
@@ -167,97 +161,6 @@ public class PathController {
 		}
 		return "ok";
 	}
-	
-	
-	// show journey detail info 
-	@RequestMapping(value = "showDetail", method = RequestMethod.PUT)
-	@ResponseBody String showDetail(@RequestBody ReqDetailJourneyInfo journeyInfo
-			, Model model) 
-	{
-		Optional<JourneyDate> journey = journeyDateService.findById(journeyInfo.journeyId);
-		if (journey.get() != null)
-		{
-			model.addAttribute("detail", journey.get());
-		}
-		return "ok";
-	}
-	
-	
-	// journey popup page /journeyPopup?journeyId=1&journeyTimeId=10
-	@RequestMapping(value = "journeyPopup/{journeyId}/{journeyTimeId}", method = RequestMethod.GET)
-	public String journeyPopup( @PathVariable Long journeyId, 
-			@PathVariable Long journeyTimeId,
-			Model model )
-	{
-		return "journeyPopup";
-	}
-	
-	
-	// request today journey data
-	@RequestMapping(value = "todayJourneyInfo", method = RequestMethod.GET)
-	@ResponseBody List<JourneyDate> todayJourneyInfo(@RequestParam("user") Optional<Integer> userId) 
-	{
-		//LocalDateTime now = LocalDateTime.of(2020, 4, 24, 0, 0, 0);
-		LocalDateTime now = LocalDateTime.now();
-		
-		LocalDate date0 = now.toLocalDate();
-		LocalDate date1 = date0.plusDays(1);
-		List<JourneyDate> list = journeyDateService.findByDate(date0, date1);
-		return list;
-	}
-	
-	
-	// landmark address upload
-	@RequestMapping("landMarkAddr")
-	String landMarkAddrUpload(Model model) 
-	{
-		List<LandMark> landMarks = landMarkService.findAll();
-		model.addAttribute("landMarks", landMarks);
-		return "landmarkaddr";
-	}
-	
-	
-	// landmark address upload request
-	@RequestMapping(value = "landMarkAddrUpload", method = RequestMethod.PUT)
-	@ResponseBody String landMarkAddrUpload(@RequestBody ReqLandMarkAddr data) 
-	{
-		Optional<LandMark> landMark = landMarkService.findById(data.id);
-		if (landMark.get() != null)
-		{
-			if (data.addr != null)
-			{
-				landMark.get().address = data.addr;
-				landMarkService.save(landMark.get());
-			}
-		}
-		return "ok";
-	}
-	
-	
-	// request landmark data
-	// url : landMarkInfo?user=1&id=1
-	@RequestMapping(value = "landMarkInfo", method = RequestMethod.GET)
-	@ResponseBody LandMark landMarkInfo(@RequestParam("user") Optional<Integer> userId,
-			@RequestParam("id") Optional<Long> landMarkId) 
-	{
-		Optional<LandMark> landMark = landMarkService.findById(landMarkId.get());
-		return landMark.get();
-	}
-	
-	
-	// request landmark comment update
-	// url : landMarkCommentUpload
-	@RequestMapping(value = "landMarkCommentUpload", method = RequestMethod.PUT)
-	@ResponseBody String landMarkCommentUpload(@RequestBody ReqLandMarkCommentUpdate data) 
-	{
-		Optional<LandMark> landMark = landMarkService.findById(data.id);
-		if (landMark.get() != null)
-		{
-			landMark.get().comment = data.comment;
-			landMarkService.save(landMark.get());
-		}
-		return "Ok";
-	}	
-	
-	
+
+
 }

@@ -21,11 +21,11 @@ public class LandMarkService {
 	LandMarkRepo landMarkRepo;
 
 	public Page<LandMark> findPage(Pageable pageable) {
-		return landMarkRepo.findAll(pageable);
+		return landMarkRepo.findAllByOrderByDateTimeDesc(pageable);
 	}
 	
 	public List<LandMark> findAll() {
-		return landMarkRepo.findAll();
+		return landMarkRepo.findAllByOrderByDateTimeDesc();
 	}
 	
 	public List<LandMark> findByUserId(Long userId) {
@@ -34,6 +34,11 @@ public class LandMarkService {
 	
 	public Optional<LandMark> findById(Long id) {
 		return landMarkRepo.findById(id);
+	}
+	
+	public boolean removeLandMark(Long id) {
+		landMarkRepo.deleteById(id);
+		return true;
 	}
 	
 	public long getCount() {

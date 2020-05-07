@@ -62,9 +62,25 @@
 		var _polylines = new Map();
 		var _markers = [];
 		var _landMarkId; // edit landmark id
-
-		function init() 
-		{			
+		var _userId = 1;
+		
+		var drawingOptions = {
+		    map: _map,
+		    drawingMode: [kakao.maps.Drawing.OverlayType.MARKER],
+		    guideTooltip: ['draw', 'drag', 'edit'], 
+		    markerOptions: {
+		        draggable: false,
+		        removable: false
+		    }
+		};
+		var _manager = new kakao.maps.Drawing.DrawingManager(drawingOptions);
+		var _toolbox = new kakao.maps.Drawing.Toolbox({drawingManager: _manager});
+		_map.addControl(_toolbox.getElement(), kakao.maps.ControlPosition.LEFT);
+		kakao.maps.event.addListener(_map, 'click', mouseClickEvent);
+		
+		
+		function init()
+		{
 			// update landmark marker
 			var xmlHttp = new XMLHttpRequest();
 			xmlHttp.onreadystatechange = function() {
@@ -73,19 +89,112 @@
 		        	var data = JSON.parse(this.responseText);
 		            for(i = 0; i < data.length; i++)
 	            	{
-		            	var markerPosition = new kakao.maps.LatLng(data[i].lat, data[i].lon);
+		            	var pos = new kakao.maps.LatLng(data[i].lat, data[i].lon);
 			    		var marker = new kakao.maps.Marker({
 			    			map: _map,
-			    		    position: markerPosition
+			    		    position: pos
 			    		});
 			    		marker.setMap(null);
 			    		_markers.push(marker);
+
+		            	if (data[i].address == null) {
+		            		updateLandMarkAddress(data[i]);
+	            		}
 	            	}
-		        }				
-			}			
-			xmlHttp.open("GET", "/landMarkList?userId=1", true);
+		            
+		            refreshTable();
+		        }
+			}
+			xmlHttp.open("GET", "/landMarkList?userId=" + _userId, true);
 			xmlHttp.send(null);			
-		}		
+		}
+		
+		
+		function mouseClickEvent(mouseEvent) 
+		{
+			if (!_toolbox._selected) //add marker?
+				return;
+
+			var latlng = mouseEvent.latLng;
+			var geocoder = new kakao.maps.services.Geocoder();
+			var prom = new Promise( function(resolve, reject) {
+				var latlng = mouseEvent.latLng;
+			    geocoder.coord2RegionCode(latlng.getLng(), latlng.getLat()
+			    		, function(result, status) {
+			    	resolve({result:result,status:status,latlng:latlng});
+			    });
+			});
+			
+			prom.then( function(r) {
+				var latlng = r.latlng;
+				var result = r.result;
+				
+				for(var i = 0; i < result.length; i++) 
+	            {
+	                if (result[i].region_type === 'H') 
+	                {
+	        			var xmlHttp = new XMLHttpRequest();
+	        			xmlHttp.onreadystatechange = function() {
+	        		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+	        		        	refreshTable();
+	        		        }
+	        			};
+		    			var json = JSON.stringify({
+		    				userId : _userId,
+		    				lon :  latlng.getLng(),
+		    				lat :  latlng.getLat(),
+		    				address : result[i].address_name
+		                });							
+						xmlHttp.open("POST", "/landMarkAdd", true);
+	        			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
+						xmlHttp.send(json);	
+	        			break;
+	                }
+	            }				
+			});
+		}
+		
+		
+		function updateLandMarkAddress(landMark) 
+		{
+			var geocoder = new kakao.maps.services.Geocoder();
+			
+			var prom = new Promise( function(resolve, reject) {
+			    geocoder.coord2RegionCode(landMark.lon, landMark.lat
+			    		, function(result, status) {
+			    	resolve({result:result,status:status,landMark:landMark});
+			    });
+			});
+    		
+			prom.then( function(r) {
+				var landMark = r.landMark;
+				var result = r.result;					
+	            for(var i = 0; i < result.length; i++) 
+	            {
+	                if (result[i].region_type === 'H') 
+	                {
+	        			// uplad landmark address
+	        			var xmlHttp = new XMLHttpRequest();
+	        			xmlHttp.onreadystatechange = function() {
+	        		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+	        		        	//alert('success');
+	        		        }
+	        			};
+	        			
+	        			var json = JSON.stringify({
+	        				id : landMark.id,
+	                    	addr : result[i].address_name
+	                    });
+	        			xmlHttp.open("PUT", "landMarkAddrUpload", true);
+	        			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
+	        			xmlHttp.send(json);
+	        			break;
+	                }
+	            }
+	            
+	            refreshTable();
+			});
+		}	
 		
 
 		// journey checkbox clicked
@@ -157,23 +266,39 @@
 		}
 		
 		
+		// journey, landmark table refresh
+		function refreshTable(page1, page2) {
+
+			//which tab selection?
+			var tab = $('#tabmenu').children('.active').index();$
+
+			var size = 10;
+			var p1 = (page1 == null)? $('#journey_page').children('.active').text() : page1;
+			var p2 = (page2 == null)? $('#landmark_page').children('.active').text() : page2;
+			
+			$('#list')
+			.load(window.location.href + '?page=' + p1 + '&size=' + size + 
+					'&page2=' + p2 + ' #list'
+					, function() {
+						$('.menu .item').tab();
+						if (tab == 1) {
+							$('.menu .item').tab('change tab', 'second');
+						}
+					})
+			.fadeIn("slow")
+			;
+		}
+		
+		
 		// journey list refresh
 		function pageRefresh(page, size) {
-			$('#list')
-				.load(window.location.href + '?page=' + page + '&size=' + size + ' #list'
-						, function() {$('.menu .item').tab();})
-				.fadeIn("slow")
-				;
+			refreshTable(page, null);
 		}
 
 
 		// landmark list refresh
 		function pageRefresh2(page, size) {
-			$('#list')
-				.load(window.location.href + '?page2=' + page + '&size=' + size + ' #list'
-						, function() {$('.menu .item').tab('change tab', 'second');})
-				.fadeIn("slow")
-				;
+			refreshTable(null, page);
 		}
 		
 		
@@ -191,11 +316,27 @@
 					$('#modal_detail')
 					  .modal('show')
 					;
+					
+					var journey = JSON.parse(this.responseText);
+					$('#modal_detail').find('.date').html(journey.date);
+					
+					$('#modal_detail').find('.distance').html(
+							(journey.distance/1000).toFixed(1) + 'Km');
+					
+					$('#modal_detail').find('.journey_time').html(
+							(journey.journeyTime/(1000*60*60)).toFixed(1) + 'Hour');
+
+					$('#modal_detail').find('.start_time').html(journey.startTime);
+					
+					$('#modal_detail').find('.end_time').html(journey.endTime);
+					
+					$('#modal_detail').find('.update').html(journey.updateCount);
+					
 		        }
 		    }
-			xhr.open("PUT", 'showDetail', true);
+			xhr.open("GET", 'journeyDetail?journeyId=' + journeyId, true);
 			xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
-			xhr.send(json);			
+			xhr.send(json);
 		}
 		
 		function journeyTab() {
@@ -233,22 +374,19 @@
 					
 		        }
 		    }
-			xmlHttp.open("GET", 'landMarkInfo?user=1&id=' + landMarkId, true);
+			xmlHttp.open("GET", 'landMarkInfo?user=' + _userId + '&id=' + landMarkId, true);
 			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
 			xmlHttp.send(null);		
-			
 		}
 		
-		function updateLandMarInfo() {
-			
+		function updateLandMarkInfo() {			
 			// uplad landmark comment
 			var xmlHttp = new XMLHttpRequest();
 			xmlHttp.onreadystatechange = function() {
 		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-		        	//alert('success');
+		        	refreshTable();
 		        }
-			};
-			
+			};			
 			var json = JSON.stringify({
 				id : _landMarkId,
             	comment : $('#landmark_comment').val()
@@ -256,7 +394,29 @@
 			xmlHttp.open("PUT", "landMarkCommentUpload", true);
 			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
 			xmlHttp.send(json);
-		}		
+		}
+		
+		
+		// landmark edit modal dialog, request confirm delete landmark
+		function confirmDeleteLandMark() {
+			$('#modal_delete_confirm')
+			  .modal('show')
+			;
+		}
+		
+		
+		// landmark edit modal dialog, request delete landmark
+		function deleteLandMark() {
+			var xmlHttp = new XMLHttpRequest();
+			xmlHttp.onreadystatechange = function() {
+		        if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+		        	refreshTable();
+		        }
+			};			
+			xmlHttp.open("GET", "landMarkDelete?user=" + _userId + "&id=" + _landMarkId, true);
+			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
+			xmlHttp.send(null);
+		}
 		
 		window.onload = init;
 	</script>
@@ -289,7 +449,7 @@
 		<div class="ui bottom attached tab segment active" data-tab="first">
 	
 			<div style="width:1000px;">	
-				<table class="ui celled striped table" style="text-align:center">
+				<table class="ui celled striped table" style="text-align:center" id="journey_table">
 				  <thead>
 				    <tr><th>Show</th>
 				    <th>User</th>
@@ -324,7 +484,7 @@
 			
 				  <tfoot>
 				    <tr><th colspan="6">
-					<div class="ui right floated pagination menu"		
+					<div class="ui right floated pagination menu" id="journey_page"		
 						th:with="step = 5, left=${pageNumbers[0] - step}, right=${pageNumbers[0] + step}">
 						
 					 	<a class="icon item" th:onclick="|pageRefresh(${left}, ${page.size})|">
@@ -349,10 +509,10 @@
 	
 		</div>
 		
-		<div id="landmark_list" class="ui bottom attached tab segment" data-tab="second">
+		<div class="ui bottom attached tab segment" data-tab="second">
 		
 		  		<div style="width:1000px;">	
-					<table class="ui celled striped table" style="text-align:center">
+					<table class="ui celled striped table" style="text-align:center" id="landmkar_table">
 					  <thead>
 					    <tr><th>Show</th>
 					    <th>User</th>
@@ -360,7 +520,7 @@
 					    <th>Address</th>
 					    <th>Comment</th>
 					    <th>Focus</th>
-					    <th>Comment Edit</th>					    
+					    <th>Edit</th>					    
 					  </tr></thead>
 					  
 					  <tbody th:each="landMark : ${landMarks}">
@@ -378,7 +538,7 @@
 					      <td data-label="Focus">
 							  <button class="mini ui blue button" th:onclick="|focusLandMark(${landMark.lat}, ${landMark.lon})|" >Focus</button>
 						  </td>
-					      <td data-label="Comment" >
+					      <td data-label="Edit" >
 						      <button class="mini ui green button" th:onclick="|showEditComment(${landMark.id})|" >Edit</button>
 					      </td>
 
@@ -387,7 +547,7 @@
 
 					  <tfoot>
 					    <tr><th colspan="7">
-						<div class="ui right floated pagination menu"		
+						<div class="ui right floated pagination menu" id="landmark_page"
 							th:with="step = 5, left=${pageNumbers2[0] - step}, right=${pageNumbers2[0] + step}">
 							
 						 	<a class="icon item" th:onclick="|pageRefresh2(${left}, ${page2.size})|">
@@ -433,8 +593,31 @@
 	    </div>
 	    
 	    <div class="description">
-	      <div class="ui header">Your Journey Information!</div>
-	      <p>Enjoy Journey!!</p>
+	      <div class="ui header">Enjoy Your Journey!</div>
+	      <span>Date : </span>
+	      <span class="date">date</span>
+	      
+	      <p></p>
+	      <span>Distance : </span>
+	      <span class="distance">distance</span>
+	      
+	      <p></p>
+	      <span>Journey Time : </span>
+	      <span class="journey_time">journey time</span>
+
+	      <p></p>
+	      <span>Start Time : </span>
+	      <span class="start_time">journey time</span>
+
+	      <p></p>
+	      <span>End Time : </span>
+	      <span class="end_time">journey time</span>
+
+	      <p></p>
+	      <span>Update Count : </span>
+	      <span class="update">update count</span>
+	      
+	      <p></p>
 	    </div>
 	    
 	  </div>
@@ -473,10 +656,13 @@
 	  </div>
 	  
 	  <div class="actions">
+	    <div class="ui red deny button" style="float:left" th:onclick="|confirmDeleteLandMark()|">
+	      Delete
+	    </div>
 	    <div class="ui black deny button">
 	      Nope
 	    </div>
-	    <div class="ui positive right labeled icon button" th:onclick="|updateLandMarInfo()|">
+	    <div class="ui positive right labeled icon button" th:onclick="|updateLandMarkInfo()|">
 	      Ok
 	      <i class="checkmark icon"></i>
 	    </div>
@@ -484,7 +670,27 @@
   	</div>
 	<!-- end edit landmark modal dialog -->	  
   
-	  
+  
+  	<!-- delete confirm modal dialog -->
+	<div class="ui mini modal" id="modal_delete_confirm">
+	  <div class="header">Delete LandMark</div>
+	  <div class="content">
+	    <p>Are You Sure Delete LandMark?</p>
+	    <p></p>
+	    <p></p>
+	  </div>
+	  <div class="actions">
+	    <div class="ui red deny button">
+	      No
+	    </div>
+	    <div class="ui positive right labeled icon button" th:onclick="|deleteLandMark()|">
+	      Yes
+	      <i class="checkmark icon"></i>
+	    </div>
+	  </div>
+	</div>
+	<!-- end delete confirm modal dialog -->
+	
 	  
 </body>
 </html>

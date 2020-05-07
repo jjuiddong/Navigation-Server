@@ -8,9 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LandMarkRepo extends JpaRepository<LandMark, Long> {
 	
-	public Page<LandMark> findAll(Pageable pageable);
+	public Page<LandMark> findAllByOrderByDateTimeDesc(Pageable pageable);
 	
-	public List<LandMark> findAll();
+	public List<LandMark> findAllByOrderByDateTimeDesc();
 	
 	public List<LandMark> findByUserId(Long userId);
 	

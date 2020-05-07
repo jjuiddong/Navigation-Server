@@ -16,5 +16,5 @@ public interface JourneyDateRepo extends JpaRepository<JourneyDate, Long> {
 	public List<JourneyDate> findAll();
 	
 	public List<JourneyDate> findByDateBetween(LocalDate date0, LocalDate date1);
-    
+
 }
