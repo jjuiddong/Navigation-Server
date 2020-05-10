@@ -40,6 +40,16 @@ CREATE TABLE IF NOT EXISTS landmark (
 );
 
 
+CREATE TABLE IF NOT EXISTS user (
+	id VARCHAR(255) NOT NULL,
+	first_name VARCHAR(255) NOT NULL,
+	last_name VARCHAR(255) NOT NULL,
+	password VARCHAR(255) NOT NULL,
+	role_name VARCHAR(255) NOT NULL,
+	PRIMARY KEY (id)
+);
+
+
 --CREATE TABLE IF NOT EXISTS reservable_room (
 --	reserved_date DATE NOT NULL,
 --	room_id INT4 NOT NULL,

@@ -13,6 +13,7 @@ import java.util.stream.IntStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -26,6 +27,7 @@ import navi.model.JourneyDate;
 import navi.model.LandMark;
 import navi.service.JourneyDateService;
 import navi.service.LandMarkService;
+import navi.user.NaviUser;
 
 
 @Controller
@@ -73,6 +75,7 @@ public class PathController {
 	// path-page page /pathPage?page=1&size=10&page2=1
 	@RequestMapping("pathPage")
 	String pathPage(
+			@AuthenticationPrincipal NaviUser naviUser,
 			@RequestParam("page") Optional<Integer> page, 
 			@RequestParam("size") Optional<Integer> size,
 			@RequestParam("page2") Optional<Integer> page2, 
@@ -134,7 +137,7 @@ public class PathController {
 	// live-page page /live
 	@RequestMapping("live")
 	String live(Model model) 
-	{		
+	{
 		return "live";
 	}
 	

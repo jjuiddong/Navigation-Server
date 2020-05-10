@@ -41,11 +41,15 @@
   <a class="item" th:href="@{detail}">
     Detail
   </a>
+
   <div class="right menu">
-    <div class="item">
-        <div class="ui primary button">Sign Up</div>
-    </div>
+  	<div class="item">
+  		<form th:action="@{/logout}" method="post">
+	  		<button class="ui primary button">Log Out</button>
+		</form>
+	</div>		
   </div>
+     
 </div>
 
 <h3>~ welcome navi web ~</h3>
@@ -370,6 +374,7 @@
 					  .modal('show')
 					;
 					
+					$('#landmark_comment').html('');
 					$('#landmark_comment').html(data.comment);
 					
 		        }
