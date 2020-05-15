@@ -3,11 +3,14 @@
     xmlns:th="http://www.thymeleaf.org"
     xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+	<meta id="_csrf" name="_csrf" th:content="${_csrf.token}"/>
+	<meta id="_csrf_header" name="_csrf_header" th:content="${_csrf.headerName}"/>
 
 	<link rel="stylesheet" type="text/css" href="semantic/semantic.css">
-	<script
-	  src="assets/library/jquery.min.js"
-	  ></script>
+	<script src="assets/library/jquery.min.js"></script>
 	<script src="semantic/semantic.js"></script>
 	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=685fb6d52e9558eb55705c0b663c66bd&libraries=services,clusterer,drawing"></script>
 
@@ -53,8 +56,11 @@
 </div>
 
 <h3>~ welcome navi web ~</h3>
-	
-<div id="map" style="width:1000px;height:500px;text-align:center;margin-bottom:5px;"></div>
+
+<div id="map" style="width:100%;height:35%;text-align:center;margin-bottom:5px;"></div>  
+
+
+
 	<script th:inline="javascript">
 		var container = document.getElementById('map');
 		var options = {
@@ -81,8 +87,7 @@
 		var _toolbox = new kakao.maps.Drawing.Toolbox({drawingManager: _manager});
 		_map.addControl(_toolbox.getElement(), kakao.maps.ControlPosition.LEFT);
 		kakao.maps.event.addListener(_map, 'click', mouseClickEvent);
-		
-		
+
 		function init()
 		{
 			// update landmark marker
@@ -150,6 +155,9 @@
 		    				address : result[i].address_name
 		                });							
 						xmlHttp.open("POST", "/landMarkAdd", true);
+		    			var token = $("meta[name='_csrf']").attr("content");
+		    			var header = $("meta[name='_csrf_header']").attr("content");
+		    			xmlHttp.setRequestHeader(header, token);
 	        			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
 						xmlHttp.send(json);	
 	        			break;
@@ -189,7 +197,11 @@
 	        				id : landMark.id,
 	                    	addr : result[i].address_name
 	                    });
+
 	        			xmlHttp.open("PUT", "landMarkAddrUpload", true);
+	        			var token = $("meta[name='_csrf']").attr("content");
+	        			var header = $("meta[name='_csrf_header']").attr("content");
+	        			xmlHttp.setRequestHeader(header, token);	        			
 	        			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
 	        			xmlHttp.send(json);
 	        			break;
@@ -263,7 +275,11 @@
 				
 				var json = JSON.stringify(data);
 				var xhr = new XMLHttpRequest();
-				xhr.open("PUT", 'pathShow', true);
+				
+				xhr.open('PUT', 'pathShow', true);
+    			var token = $("meta[name='_csrf']").attr("content");
+    			var header = $("meta[name='_csrf_header']").attr("content");
+    			xhr.setRequestHeader(header, token);
 				xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
 				xhr.send(json);
 			}
@@ -339,6 +355,9 @@
 		        }
 		    }
 			xhr.open("GET", 'journeyDetail?journeyId=' + journeyId, true);
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+			xhr.setRequestHeader(header, token);
 			xhr.setRequestHeader('Content-type','application/json; charset=utf-8');
 			xhr.send(json);
 		}
@@ -380,6 +399,9 @@
 		        }
 		    }
 			xmlHttp.open("GET", 'landMarkInfo?user=' + _userId + '&id=' + landMarkId, true);
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+			xmlHttp.setRequestHeader(header, token);
 			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
 			xmlHttp.send(null);		
 		}
@@ -396,7 +418,11 @@
 				id : _landMarkId,
             	comment : $('#landmark_comment').val()
             });
+
 			xmlHttp.open("PUT", "landMarkCommentUpload", true);
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+			xmlHttp.setRequestHeader(header, token);
 			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
 			xmlHttp.send(json);
 		}
@@ -419,6 +445,9 @@
 		        }
 			};			
 			xmlHttp.open("GET", "landMarkDelete?user=" + _userId + "&id=" + _landMarkId, true);
+			var token = $("meta[name='_csrf']").attr("content");
+			var header = $("meta[name='_csrf_header']").attr("content");
+			xmlHttp.setRequestHeader(header, token);
 			xmlHttp.setRequestHeader('Content-type','application/json; charset=utf-8');
 			xmlHttp.send(null);
 		}

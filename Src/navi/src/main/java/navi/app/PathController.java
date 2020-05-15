@@ -27,6 +27,7 @@ import navi.model.JourneyDate;
 import navi.model.LandMark;
 import navi.service.JourneyDateService;
 import navi.service.LandMarkService;
+import navi.service.PathService;
 import navi.user.NaviUser;
 
 
@@ -38,6 +39,10 @@ public class PathController {
 	
 	@Autowired
 	LandMarkService landMarkService;
+	
+	@Autowired
+	PathService pathService;
+	
 	
 	final int showListCount = 10;
 	final int showPageCount = 5;
@@ -165,5 +170,5 @@ public class PathController {
 		return "ok";
 	}
 
-
+	
 }

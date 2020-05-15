@@ -32,7 +32,7 @@ public class JourneyController {
 	@Autowired
 	PathService pathService;
 	
-	
+
 	// show journey detail info 
 	@RequestMapping(value = "showDetail", method = RequestMethod.PUT)
 	@ResponseBody JourneyDate showDetail(@RequestBody ReqDetailJourneyInfo journeyInfo,

@@ -25,7 +25,6 @@ public class LandMarkController {
 	LandMarkService landMarkService;
 
 	
-	
 	// landmark address upload page
 	@RequestMapping("landMarkAddr")
 	String landMarkAddrUpload(Model model) 
@@ -106,5 +105,6 @@ public class LandMarkController {
 		landMarkService.save(landMark);		
 		return "Ok";
 	}
+	
 
 }
